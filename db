@@ -1,0 +1,75 @@
+CREATE TABLE produits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    categorie VARCHAR(100),
+    price DECIMAL(10, 2) NOT NULL
+);
+
+
+CREATE TABLE orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    buyer_name VARCHAR(255) NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    purchase_price DECIMAL(10, 2) NOT NULL
+);
+
+INSERT INTO produits (name, categorie, price) VALUES
+-- Électronique
+('Écouteurs Sans Fil', 'Électronique', 49.99),
+('Souris Gaming', 'Électronique', 29.99),
+('Clavier Mécanique', 'Électronique', 89.99),
+('Écran 24 pouces', 'Électronique', 149.99),
+('Batterie Externe', 'Électronique', 24.99),
+-- Vêtements
+('T-shirt en Coton', 'Vêtements', 19.99),
+('Sweat à Capuche', 'Vêtements', 39.99),
+('Jeans Slim', 'Vêtements', 49.99),
+('Veste d''hiver', 'Vêtements', 89.99),
+('Chaussettes (Lot de 3)', 'Vêtements', 9.99),
+-- Maison
+('Lampe de Chevet', 'Maison', 25.00),
+('Cafetière à Piston', 'Maison', 34.99),
+('Coussin Ergonomique', 'Maison', 19.99),
+('Poêle Antiadhésive', 'Maison', 29.99),
+('Aspirateur Robot', 'Maison', 199.99),
+-- Livres
+('Roman de Science-Fiction', 'Livres', 14.99),
+('Livre de Cuisine Facile', 'Livres', 22.50),
+('Manuel de SQL', 'Livres', 35.00),
+('Biographie Historique', 'Livres', 18.00),
+('Bande Dessinée', 'Livres', 12.99),
+-- Sports
+('Tapis de Yoga', 'Sports', 25.00),
+('Haltères (Paire de 5kg)', 'Sports', 39.99),
+('Gourde Isotherme', 'Sports', 15.99),
+('Sac de Sport', 'Sports', 29.99),
+('Montre Connectée Sport', 'Sports', 120.00);
+
+
+INSERT INTO orders (buyer_name, product_name, quantity, purchase_date, purchase_price) VALUES
+-- Alice Smith's orders
+('Alice Smith', 'Écouteurs Sans Fil', 1, '2026-06-01 10:30:00', 49.99),
+('Alice Smith', 'Tapis de Yoga', 1, '2026-06-03 14:15:00', 25.00),
+('Alice Smith', 'Gourde Isotherme', 2, '2026-06-10 09:00:00', 15.99),
+
+-- Jean Dupont's orders
+('Jean Dupont', 'Manuel de SQL', 1, '2026-06-01 11:00:00', 35.00),
+('Jean Dupont', 'Souris Gaming', 1, '2026-06-05 16:45:00', 29.99),
+('Jean Dupont', 'Clavier Mécanique', 1, '2026-06-12 18:20:00', 89.99),
+
+-- Bob Johnson's orders
+('Bob Johnson', 'T-shirt en Coton', 3, '2026-06-02 13:00:00', 19.99),
+('Bob Johnson', 'Jeans Slim', 1, '2026-06-08 15:30:00', 49.99),
+
+-- Marie Martin's orders
+('Marie Martin', 'Lampe de Chevet', 2, '2026-06-04 19:10:00', 25.00),
+('Marie Martin', 'Coussin Ergonomique', 1, '2026-06-04 19:15:00', 19.99),
+
+-- Single-order buyers
+('Thomas Durand', 'Aspirateur Robot', 1, '2026-06-05 08:30:00', 199.99),
+('Chloé Petit', 'Roman de Science-Fiction', 1, '2026-06-06 11:22:00', 14.99),
+('Pierre Moreau', 'Veste d''hiver', 1, '2026-06-07 10:00:00', 89.99),
+('Sophie Roux', 'Cafetière à Piston', 1, '2026-06-09 07:45:00', 34.99),
+('Lucas Michel', 'Batterie Externe', 2, '2026-06-11 21:10:00', 24.99);
