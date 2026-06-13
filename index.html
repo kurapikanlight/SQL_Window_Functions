@@ -850,18 +850,18 @@ const VIEWS = {
         <div class="data-table-card">
           <div class="data-table-header">
             <span class="tbl-icon">TABLE</span>
-            <span class="tbl-name">employees</span>
-            <span class="tbl-status" id="status-employees">○ pending</span>
+            <span class="tbl-name">Produits</span>
+            
           </div>
           <div class="data-table-wrap">
             <table class="data-table" id="tbl-employees">
               <thead>
                 <tr>
-                  <th>id</th><th>name</th><th>department</th><th>salary</th><th>hire_date</th>
+                  <th>id</th><th>name</th><th>categorie</th><th>price</th>
                 </tr>
               </thead>
               <tbody id="tbody-employees">
-                <tr class="loading-row"><td colspan="5">Loading from Supabase…</td></tr>
+                <tr class="loading-row"><td colspan="4">Loading from Supabase…</td></tr>
               </tbody>
             </table>
           </div>
@@ -871,18 +871,18 @@ const VIEWS = {
         <div class="data-table-card">
           <div class="data-table-header">
             <span class="tbl-icon">TABLE</span>
-            <span class="tbl-name">sales</span>
-            <span class="tbl-status" id="status-sales">○ pending</span>
+            <span class="tbl-name">Orders</span>
+            
           </div>
           <div class="data-table-wrap">
             <table class="data-table" id="tbl-sales">
               <thead>
                 <tr>
-                  <th>id</th><th>employee_id</th><th>amount</th><th>region</th><th>sale_date</th>
+                  <th>id</th><th>buyer_name</th><th>product_name</th><th>quantity</th><th>purchase_date</th><th>purchase_price</th>
                 </tr>
               </thead>
               <tbody id="tbody-sales">
-                <tr class="loading-row"><td colspan="5">Loading from Supabase…</td></tr>
+                <tr class="loading-row"><td colspan="6">Loading from Supabase…</td></tr>
               </tbody>
             </table>
           </div>
@@ -1202,10 +1202,11 @@ function renderSalesTable(rows) {
   tbody.innerHTML = rows.map(o => `
     <tr>
       <td class="td-num">${o.id}</td>
-      <td class="td-num">${o.employee_id}</td>
-      <td class="td-num">${Number(o.amount).toLocaleString()}</td>
-      <td><span class="td-tag">${o.region}</span></td>
-      <td>${o.sale_date}</td>
+      <td class="td-num">${o.buyer_name}</td>
+      <td class="td-num">${o.product_name}</td>
+      <td class="td-num">${Number(o.quantity).toLocaleString()}</td>
+      <td><span class="td-tag">${o.purchase_date}</span></td>
+      <td>${o.purchase_price}</td>
     </tr>
   `).join('');
 }
