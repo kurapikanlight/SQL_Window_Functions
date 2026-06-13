@@ -1008,7 +1008,7 @@ const VIEWS = {
       `<span class="sk">ORDER BY</span> <span class="scl">e.department</span><span class="sp">,</span> <span class="st">rank</span><span class="sp">;</span>`,
     ],
     queryId: 'rank-dense',
-    sql: `SELECT e.name, e.department, e.salary, RANK() OVER (PARTITION BY e.department ORDER BY e.salary DESC) AS rank, DENSE_RANK() OVER (PARTITION BY e.department ORDER BY e.salary DESC) AS dense_rank FROM employees e ORDER BY e.department, rank;`
+    sql: `;`
   }),
 
   /* ── LAG AND LEAD ─────────────────────────────────── */
