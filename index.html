@@ -886,42 +886,42 @@ const VIEWS_DATA = {
   'over-global': {
     section: '§1', title: 'OVER() — Global Window',
     description: 'The bare <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">OVER()</code> clause with no arguments defines a window spanning the entire result set. Every row sees the same aggregate value computed across all rows simultaneously.',
-    sql: `-- §1 · OVER() with no partition — global aggregate\nSELECT\n  p.name,\n  p.categorie,\n  p.price,\n  SUM(p.price) OVER() AS total_price_all,\n  AVG(p.price) OVER() AS avg_price_all,\n  COUNT(*) OVER() AS total_products\nFROM produits p\nORDER BY p.price DESC`
+    sql: `-- §1 · OVER() with no partition — global aggregate\n`
   },
   'partition-by': {
     section: '§2', title: 'PARTITION BY',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">PARTITION BY</code> divides the result set into independent sub-windows. The aggregate resets for each partition, allowing per-group analytics without collapsing rows.',
-    sql: `-- §2 · PARTITION BY categorie — per-category aggregates\nSELECT\n  p.name,\n  p.categorie,\n  p.price,\n  SUM(p.price) OVER (PARTITION BY p.categorie) AS categorie_total,\n  AVG(p.price) OVER (PARTITION BY p.categorie) AS categorie_avg,\n  COUNT(*) OVER (PARTITION BY p.categorie) AS categorie_count\nFROM produits p\nORDER BY p.categorie, p.price DESC`
+    sql: `-- §2 · PARTITION BY categorie — per-category aggregates\n`
   },
   'order-by': {
     section: '§3', title: 'ORDER BY in OVER()',
     description: 'Adding <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> inside the window frame turns an aggregate into a running (cumulative) computation. The window grows one row at a time following the specified sort order.',
-    sql: `-- §3 · ORDER BY inside OVER() — cumulative revenue over time\nSELECT\n  o.purchase_date,\n  o.buyer_name,\n  o.purchase_price,\n  SUM(o.purchase_price) OVER (\n    ORDER BY o.purchase_date \n    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW\n  ) AS running_total\nFROM orders o\nORDER BY o.purchase_date`
+    sql: `-- §3 · ORDER BY inside OVER() — cumulative revenue over time\n`
   },
   'row-number': {
     section: '§4', title: 'ROW_NUMBER()',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ROW_NUMBER()</code> assigns a unique sequential integer to each row within its partition, starting at 1. Ties receive distinct numbers.',
-    sql: `-- §4 · ROW_NUMBER() — rank products within each category by price\nSELECT\n  p.name,\n  p.categorie,\n  p.price,\n  ROW_NUMBER() OVER (\n    PARTITION BY p.categorie\n    ORDER BY p.price DESC\n  ) AS row_num\nFROM produits p\nORDER BY p.categorie, row_num`
+    sql: `-- §4 · ROW_NUMBER() — rank products within each category by price\n`
   },
   'rank-dense': {
     section: '§5', title: 'RANK() and DENSE_RANK()',
     description: 'Both assign ranks; the difference is how they handle ties. <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">RANK()</code> skips numbers after a tie (1, 2, 2, 4), while <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">DENSE_RANK()</code> never skips (1, 2, 2, 3).',
-    sql: `-- §5 · RANK() vs DENSE_RANK() — compare tie-handling on price\nSELECT\n  p.name,\n  p.categorie,\n  p.price,\n  RANK() OVER (\n    PARTITION BY p.categorie\n    ORDER BY p.price DESC\n  ) AS rank_std,\n  DENSE_RANK() OVER (\n    PARTITION BY p.categorie\n    ORDER BY p.price DESC\n  ) AS dense_rank\nFROM produits p\nORDER BY p.categorie, rank_std`
+    sql: `-- §5 · RANK() vs DENSE_RANK() — compare tie-handling on price\n`
   },
   'lag-lead': {
     section: '§6', title: 'LAG() and LEAD()',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">LAG(col, n)</code> looks backward <em>n</em> rows; <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">LEAD(col, n)</code> looks forward. Both accept an optional default for when the offset falls outside the partition boundary.',
-    sql: `-- §6 · LAG() and LEAD() — compare each buyer's adjacent orders\nSELECT\n  o.purchase_date,\n  o.buyer_name,\n  o.purchase_price AS current_order,\n  LAG(o.purchase_price, 1, 0) OVER (\n    PARTITION BY o.buyer_name\n    ORDER BY o.purchase_date\n  ) AS prev_order,\n  LEAD(o.purchase_price, 1, 0) OVER (\n    PARTITION BY o.buyer_name\n    ORDER BY o.purchase_date\n  ) AS next_order\nFROM orders o\nORDER BY o.buyer_name, o.purchase_date`
+    sql: `-- §6 · LAG() and LEAD() — compare each buyer's adjacent orders\n`
   },
   'sum-over': {
     section: '§7', title: 'SUM() OVER()',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">SUM() OVER()</code> computes a cumulative or partitioned total without collapsing the row set. Pair it with <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">PARTITION BY</code> to reset per group, or with <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> for a running total.',
-    sql: `-- §7 · SUM() OVER() — running total and per-buyer spend\nSELECT\n  o.purchase_date,\n  o.buyer_name,\n  o.purchase_price,\n  SUM(o.purchase_price) OVER (\n    ORDER BY o.purchase_date\n  ) AS running_total,\n  SUM(o.purchase_price) OVER (\n    PARTITION BY o.buyer_name\n    ORDER BY o.purchase_date\n  ) AS buyer_running_total\nFROM orders o\nORDER BY o.buyer_name, o.purchase_date`
+    sql: `-- §7 · SUM() OVER() — running total and per-buyer spend\n`
   },
   'avg-over': {
     section: '§8', title: 'AVG() OVER()',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">AVG() OVER()</code> computes a moving or partition average. A common pattern is a 3-row moving average using <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING</code> to smooth time-series data.',
-    sql: `-- §8 · AVG() OVER() — moving average and global baseline\nSELECT\n  o.purchase_date,\n  o.buyer_name,\n  o.purchase_price,\n  AVG(o.purchase_price) OVER (\n    PARTITION BY o.buyer_name\n    ORDER BY o.purchase_date\n    ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING\n  ) AS moving_avg_3,\n  AVG(o.purchase_price) OVER() AS global_avg\nFROM orders o\nORDER BY o.buyer_name, o.purchase_date`
+    sql: `-- §8 · AVG() OVER() — moving average and global baseline\n`
   }
 };
 
