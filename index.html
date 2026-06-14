@@ -766,9 +766,9 @@ async function fetchTableData(tableName) {
 
     // 2. Vérification du statut de la réponse HTTP
     if (!res.ok) {
-      return { 
-        rows: [], 
-        error: data.message || `Erreur HTTP ${res.status}` 
+      return {
+        rows: [],
+        error: { message: data.message || `Erreur HTTP ${res.status}` }
       };
     }
 
@@ -776,9 +776,9 @@ async function fetchTableData(tableName) {
 
   } catch (err) {
     // 3. Capture des erreurs réseau (ex: pas d'internet) ou JSON invalide
-    return { 
-      rows: [], 
-      error: err.message || 'Erreur réseau inconnue' 
+    return {
+      rows: [],
+      error: { message: err.message || 'Erreur réseau inconnue' }
     };
   }
 }
@@ -854,13 +854,13 @@ const VIEWS = {
             
           </div>
           <div class="data-table-wrap">
-            <table class="data-table" id="tbl-employees">
+            <table class="data-table" id="tbl-produits">
               <thead>
                 <tr>
                   <th>id</th><th>name</th><th>categorie</th><th>price</th>
                 </tr>
               </thead>
-              <tbody id="tbody-employees">
+              <tbody id="tbody-produits">
                 <tr class="loading-row"><td colspan="4">Loading from Supabase…</td></tr>
               </tbody>
             </table>
@@ -875,13 +875,13 @@ const VIEWS = {
             
           </div>
           <div class="data-table-wrap">
-            <table class="data-table" id="tbl-sales">
+            <table class="data-table" id="tbl-orders">
               <thead>
                 <tr>
                   <th>id</th><th>buyer_name</th><th>product_name</th><th>quantity</th><th>purchase_date</th><th>purchase_price</th>
                 </tr>
               </thead>
-              <tbody id="tbody-sales">
+              <tbody id="tbody-orders">
                 <tr class="loading-row"><td colspan="6">Loading from Supabase…</td></tr>
               </tbody>
             </table>
@@ -899,17 +899,17 @@ const VIEWS = {
     sqlLines: [
       `<span class="sc">-- §1 · OVER() with no partition — global aggregate</span>`,
       `<span class="sk">SELECT</span>`,
-      `  <span class="scl">e.name</span><span class="sp">,</span>`,
-      `  <span class="scl">e.department</span><span class="sp">,</span>`,
-      `  <span class="scl">e.salary</span><span class="sp">,</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">e.salary</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">total_salary_all</span><span class="sp">,</span>`,
-      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">e.salary</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">avg_salary_all</span><span class="sp">,</span>`,
-      `  <span class="sf">COUNT</span><span class="sp">(*)</span>         <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">total_employees</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">employees</span> <span class="st">e</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">e.salary</span> <span class="sk">DESC</span><span class="sp">;</span>`,
+      `  <span class="scl">p.name</span><span class="sp">,</span>`,
+      `  <span class="scl">p.categorie</span><span class="sp">,</span>`,
+      `  <span class="scl">p.price</span><span class="sp">,</span>`,
+      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">p.price</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">total_price_all</span><span class="sp">,</span>`,
+      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">p.price</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">avg_price_all</span><span class="sp">,</span>`,
+      `  <span class="sf">COUNT</span><span class="sp">(*)</span>        <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">total_products</span>`,
+      `<span class="sk">FROM</span>   <span class="stb">produits</span> <span class="st">p</span>`,
+      `<span class="sk">ORDER BY</span> <span class="scl">p.price</span> <span class="sk">DESC</span><span class="sp">;</span>`,
     ],
     queryId: 'over-global',
-    sql: `SELECT e.name, e.department, e.salary, SUM(e.salary) OVER() AS total_salary_all, AVG(e.salary) OVER() AS avg_salary_all, COUNT(*) OVER() AS total_employees FROM employees e ORDER BY e.salary DESC;`
+    sql: `SELECT p.name, p.categorie, p.price, SUM(p.price) OVER() AS total_price_all, AVG(p.price) OVER() AS avg_price_all, COUNT(*) OVER() AS total_products FROM produits p ORDER BY p.price DESC;`
   }),
 
   /* ── PARTITION BY ─────────────────────────────────── */
@@ -918,22 +918,22 @@ const VIEWS = {
     title: 'PARTITION BY',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">PARTITION BY</code> divides the result set into independent sub-windows. The aggregate resets for each partition, allowing per-group analytics without collapsing rows.',
     sqlLines: [
-      `<span class="sc">-- §2 · PARTITION BY department — per-group aggregates</span>`,
+      `<span class="sc">-- §2 · PARTITION BY categorie — per-category aggregates</span>`,
       `<span class="sk">SELECT</span>`,
-      `  <span class="scl">e.name</span><span class="sp">,</span>`,
-      `  <span class="scl">e.department</span><span class="sp">,</span>`,
-      `  <span class="scl">e.salary</span><span class="sp">,</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">e.salary</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">e.department</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">dept_total</span><span class="sp">,</span>`,
-      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">e.salary</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">e.department</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">dept_avg</span><span class="sp">,</span>`,
+      `  <span class="scl">p.name</span><span class="sp">,</span>`,
+      `  <span class="scl">p.categorie</span><span class="sp">,</span>`,
+      `  <span class="scl">p.price</span><span class="sp">,</span>`,
+      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">p.price</span><span class="sp">)</span>`,
+      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">categorie_total</span><span class="sp">,</span>`,
+      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">p.price</span><span class="sp">)</span>`,
+      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">categorie_avg</span><span class="sp">,</span>`,
       `  <span class="sf">COUNT</span><span class="sp">(*)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">e.department</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">dept_headcount</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">employees</span> <span class="st">e</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">e.department</span><span class="sp">,</span> <span class="scl">e.salary</span> <span class="sk">DESC</span><span class="sp">;</span>`,
+      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">categorie_count</span>`,
+      `<span class="sk">FROM</span>   <span class="stb">produits</span> <span class="st">p</span>`,
+      `<span class="sk">ORDER BY</span> <span class="scl">p.categorie</span><span class="sp">,</span> <span class="scl">p.price</span> <span class="sk">DESC</span><span class="sp">;</span>`,
     ],
     queryId: 'partition-by',
-    sql: `SELECT e.name, e.department, e.salary, SUM(e.salary) OVER (PARTITION BY e.department) AS dept_total, AVG(e.salary) OVER (PARTITION BY e.department) AS dept_avg, COUNT(*) OVER (PARTITION BY e.department) AS dept_headcount FROM employees e ORDER BY e.department, e.salary DESC;`
+    sql: `SELECT p.name, p.categorie, p.price, SUM(p.price) OVER (PARTITION BY p.categorie) AS categorie_total, AVG(p.price) OVER (PARTITION BY p.categorie) AS categorie_avg, COUNT(*) OVER (PARTITION BY p.categorie) AS categorie_count FROM produits p ORDER BY p.categorie, p.price DESC;`
   }),
 
   /* ── ORDER BY IN OVER() ───────────────────────────── */
@@ -942,22 +942,22 @@ const VIEWS = {
     title: 'ORDER BY in OVER()',
     description: 'Adding <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> inside the window frame turns an aggregate into a running (cumulative) computation. The window grows one row at a time following the specified sort order.',
     sqlLines: [
-      `<span class="sc">-- §3 · ORDER BY inside OVER() — cumulative running total</span>`,
+      `<span class="sc">-- §3 · ORDER BY inside OVER() — cumulative revenue over time</span>`,
       `<span class="sk">SELECT</span>`,
-      `  <span class="scl">s.sale_date</span><span class="sp">,</span>`,
-      `  <span class="scl">s.employee_id</span><span class="sp">,</span>`,
-      `  <span class="scl">s.amount</span><span class="sp">,</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">s.amount</span><span class="sp">)</span>`,
+      `  <span class="scl">o.purchase_date</span><span class="sp">,</span>`,
+      `  <span class="scl">o.buyer_name</span><span class="sp">,</span>`,
+      `  <span class="scl">o.purchase_price</span><span class="sp">,</span>`,
+      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span>`,
       `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">ORDER BY</span> <span class="scl">s.sale_date</span>`,
+      `      <span class="sk">ORDER BY</span> <span class="scl">o.purchase_date</span>`,
       `      <span class="sk">ROWS BETWEEN UNBOUNDED PRECEDING</span>`,
       `           <span class="sk">AND</span> <span class="sk">CURRENT ROW</span>`,
       `    <span class="sp">)</span>  <span class="sk">AS</span> <span class="st">running_total</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">sales</span> <span class="st">s</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">s.sale_date</span><span class="sp">;</span>`,
+      `<span class="sk">FROM</span>   <span class="stb">orders</span> <span class="st">o</span>`,
+      `<span class="sk">ORDER BY</span> <span class="scl">o.purchase_date</span><span class="sp">;</span>`,
     ],
     queryId: 'order-by',
-    sql: `SELECT s.sale_date, s.employee_id, s.amount, SUM(s.amount) OVER (ORDER BY s.sale_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total FROM sales s ORDER BY s.sale_date;`
+    sql: `SELECT o.purchase_date, o.buyer_name, o.purchase_price, SUM(o.purchase_price) OVER (ORDER BY o.purchase_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total FROM orders o ORDER BY o.purchase_date;`
   }),
 
   /* ── ROW_NUMBER() ─────────────────────────────────── */
@@ -966,21 +966,21 @@ const VIEWS = {
     title: 'ROW_NUMBER()',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ROW_NUMBER()</code> assigns a unique sequential integer to each row within its partition, starting at 1. Ties receive distinct numbers — order between tied rows is not guaranteed unless a fully deterministic <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> is used.',
     sqlLines: [
-      `<span class="sc">-- §4 · ROW_NUMBER() — unique rank per department by salary</span>`,
+      `<span class="sc">-- §4 · ROW_NUMBER() — rank products within each category by price</span>`,
       `<span class="sk">SELECT</span>`,
-      `  <span class="scl">e.name</span><span class="sp">,</span>`,
-      `  <span class="scl">e.department</span><span class="sp">,</span>`,
-      `  <span class="scl">e.salary</span><span class="sp">,</span>`,
+      `  <span class="scl">p.name</span><span class="sp">,</span>`,
+      `  <span class="scl">p.categorie</span><span class="sp">,</span>`,
+      `  <span class="scl">p.price</span><span class="sp">,</span>`,
       `  <span class="sf">ROW_NUMBER</span><span class="sp">()</span>`,
       `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">e.department</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">e.salary</span> <span class="sk">DESC</span>`,
+      `      <span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span>`,
+      `      <span class="sk">ORDER BY</span>     <span class="scl">p.price</span> <span class="sk">DESC</span>`,
       `    <span class="sp">)</span>  <span class="sk">AS</span> <span class="st">row_num</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">employees</span> <span class="st">e</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">e.department</span><span class="sp">,</span> <span class="st">row_num</span><span class="sp">;</span>`,
+      `<span class="sk">FROM</span>   <span class="stb">produits</span> <span class="st">p</span>`,
+      `<span class="sk">ORDER BY</span> <span class="scl">p.categorie</span><span class="sp">,</span> <span class="st">row_num</span><span class="sp">;</span>`,
     ],
     queryId: 'row-number',
-    sql: `SELECT e.name, e.department, e.salary, ROW_NUMBER() OVER (PARTITION BY e.department ORDER BY e.salary DESC) AS row_num FROM employees e ORDER BY e.department, row_num;`
+    sql: `SELECT p.name, p.categorie, p.price, ROW_NUMBER() OVER (PARTITION BY p.categorie ORDER BY p.price DESC) AS row_num FROM produits p ORDER BY p.categorie, row_num;`
   }),
 
   /* ── RANK AND DENSE_RANK ──────────────────────────── */
@@ -989,26 +989,26 @@ const VIEWS = {
     title: 'RANK() and DENSE_RANK()',
     description: 'Both assign ranks; the difference is how they handle ties. <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">RANK()</code> skips numbers after a tie (1, 2, 2, 4), while <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">DENSE_RANK()</code> never skips (1, 2, 2, 3).',
     sqlLines: [
-      `<span class="sc">-- §5 · RANK() vs DENSE_RANK() — compare tie-handling</span>`,
+      `<span class="sc">-- §5 · RANK() vs DENSE_RANK() — compare tie-handling on price</span>`,
       `<span class="sk">SELECT</span>`,
-      `  <span class="scl">e.name</span><span class="sp">,</span>`,
-      `  <span class="scl">e.department</span><span class="sp">,</span>`,
-      `  <span class="scl">e.salary</span><span class="sp">,</span>`,
+      `  <span class="scl">p.name</span><span class="sp">,</span>`,
+      `  <span class="scl">p.categorie</span><span class="sp">,</span>`,
+      `  <span class="scl">p.price</span><span class="sp">,</span>`,
       `  <span class="sf">RANK</span><span class="sp">()</span>`,
       `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">e.department</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">e.salary</span> <span class="sk">DESC</span>`,
+      `      <span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span>`,
+      `      <span class="sk">ORDER BY</span>     <span class="scl">p.price</span> <span class="sk">DESC</span>`,
       `    <span class="sp">)</span>  <span class="sk">AS</span> <span class="st">rank</span><span class="sp">,</span>`,
       `  <span class="sf">DENSE_RANK</span><span class="sp">()</span>`,
       `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">e.department</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">e.salary</span> <span class="sk">DESC</span>`,
+      `      <span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span>`,
+      `      <span class="sk">ORDER BY</span>     <span class="scl">p.price</span> <span class="sk">DESC</span>`,
       `    <span class="sp">)</span>  <span class="sk">AS</span> <span class="st">dense_rank</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">employees</span> <span class="st">e</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">e.department</span><span class="sp">,</span> <span class="st">rank</span><span class="sp">;</span>`,
+      `<span class="sk">FROM</span>   <span class="stb">produits</span> <span class="st">p</span>`,
+      `<span class="sk">ORDER BY</span> <span class="scl">p.categorie</span><span class="sp">,</span> <span class="st">rank</span><span class="sp">;</span>`,
     ],
     queryId: 'rank-dense',
-    sql: `;`
+    sql: `SELECT p.name, p.categorie, p.price, RANK() OVER (PARTITION BY p.categorie ORDER BY p.price DESC) AS rank, DENSE_RANK() OVER (PARTITION BY p.categorie ORDER BY p.price DESC) AS dense_rank FROM produits p ORDER BY p.categorie, rank;`
   }),
 
   /* ── LAG AND LEAD ─────────────────────────────────── */
@@ -1017,26 +1017,26 @@ const VIEWS = {
     title: 'LAG() and LEAD()',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">LAG(col, n)</code> looks backward <em>n</em> rows; <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">LEAD(col, n)</code> looks forward. Both accept an optional default for when the offset falls outside the partition boundary.',
     sqlLines: [
-      `<span class="sc">-- §6 · LAG() and LEAD() — compare adjacent sale amounts</span>`,
+      `<span class="sc">-- §6 · LAG() and LEAD() — compare each buyer's adjacent orders</span>`,
       `<span class="sk">SELECT</span>`,
-      `  <span class="scl">s.sale_date</span><span class="sp">,</span>`,
-      `  <span class="scl">s.employee_id</span><span class="sp">,</span>`,
-      `  <span class="scl">s.amount</span>                              <span class="sk">AS</span> <span class="st">current_sale</span><span class="sp">,</span>`,
-      `  <span class="sf">LAG</span><span class="sp">(</span><span class="scl">s.amount</span><span class="sp">,</span> <span class="sn">1</span><span class="sp">,</span> <span class="sn">0</span><span class="sp">)</span>`,
+      `  <span class="scl">o.purchase_date</span><span class="sp">,</span>`,
+      `  <span class="scl">o.buyer_name</span><span class="sp">,</span>`,
+      `  <span class="scl">o.purchase_price</span>                      <span class="sk">AS</span> <span class="st">current_order</span><span class="sp">,</span>`,
+      `  <span class="sf">LAG</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">,</span> <span class="sn">1</span><span class="sp">,</span> <span class="sn">0</span><span class="sp">)</span>`,
       `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">s.employee_id</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">s.sale_date</span>`,
-      `    <span class="sp">)</span>                                    <span class="sk">AS</span> <span class="st">prev_sale</span><span class="sp">,</span>`,
-      `  <span class="sf">LEAD</span><span class="sp">(</span><span class="scl">s.amount</span><span class="sp">,</span> <span class="sn">1</span><span class="sp">,</span> <span class="sn">0</span><span class="sp">)</span>`,
+      `      <span class="sk">PARTITION BY</span> <span class="scl">o.buyer_name</span>`,
+      `      <span class="sk">ORDER BY</span>     <span class="scl">o.purchase_date</span>`,
+      `    <span class="sp">)</span>                                    <span class="sk">AS</span> <span class="st">prev_order</span><span class="sp">,</span>`,
+      `  <span class="sf">LEAD</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">,</span> <span class="sn">1</span><span class="sp">,</span> <span class="sn">0</span><span class="sp">)</span>`,
       `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">s.employee_id</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">s.sale_date</span>`,
-      `    <span class="sp">)</span>                                    <span class="sk">AS</span> <span class="st">next_sale</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">sales</span> <span class="st">s</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">s.employee_id</span><span class="sp">,</span> <span class="scl">s.sale_date</span><span class="sp">;</span>`,
+      `      <span class="sk">PARTITION BY</span> <span class="scl">o.buyer_name</span>`,
+      `      <span class="sk">ORDER BY</span>     <span class="scl">o.purchase_date</span>`,
+      `    <span class="sp">)</span>                                    <span class="sk">AS</span> <span class="st">next_order</span>`,
+      `<span class="sk">FROM</span>   <span class="stb">orders</span> <span class="st">o</span>`,
+      `<span class="sk">ORDER BY</span> <span class="scl">o.buyer_name</span><span class="sp">,</span> <span class="scl">o.purchase_date</span><span class="sp">;</span>`,
     ],
     queryId: 'lag-lead',
-    sql: `SELECT s.sale_date, s.employee_id, s.amount AS current_sale, LAG(s.amount, 1, 0) OVER (PARTITION BY s.employee_id ORDER BY s.sale_date) AS prev_sale, LEAD(s.amount, 1, 0) OVER (PARTITION BY s.employee_id ORDER BY s.sale_date) AS next_sale FROM sales s ORDER BY s.employee_id, s.sale_date;`
+    sql: `SELECT o.purchase_date, o.buyer_name, o.purchase_price AS current_order, LAG(o.purchase_price, 1, 0) OVER (PARTITION BY o.buyer_name ORDER BY o.purchase_date) AS prev_order, LEAD(o.purchase_price, 1, 0) OVER (PARTITION BY o.buyer_name ORDER BY o.purchase_date) AS next_order FROM orders o ORDER BY o.buyer_name, o.purchase_date;`
   }),
 
   /* ── SUM() OVER() ─────────────────────────────────── */
@@ -1045,25 +1045,25 @@ const VIEWS = {
     title: 'SUM() OVER()',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">SUM() OVER()</code> computes a cumulative or partitioned total without collapsing the row set. Pair it with <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">PARTITION BY</code> to reset per group, or with <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> for a running total.',
     sqlLines: [
-      `<span class="sc">-- §7 · SUM() OVER() — running total and group contribution</span>`,
+      `<span class="sc">-- §7 · SUM() OVER() — running total and per-buyer spend</span>`,
       `<span class="sk">SELECT</span>`,
-      `  <span class="scl">s.sale_date</span><span class="sp">,</span>`,
-      `  <span class="scl">s.region</span><span class="sp">,</span>`,
-      `  <span class="scl">s.amount</span><span class="sp">,</span>`,
-      `  <span class="sc">-- Running total across all rows</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">s.amount</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">ORDER BY</span> <span class="scl">s.sale_date</span><span class="sp">)</span>   <span class="sk">AS</span> <span class="st">running_total</span><span class="sp">,</span>`,
-      `  <span class="sc">-- Running total per region</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">s.amount</span><span class="sp">)</span>`,
+      `  <span class="scl">o.purchase_date</span><span class="sp">,</span>`,
+      `  <span class="scl">o.buyer_name</span><span class="sp">,</span>`,
+      `  <span class="scl">o.purchase_price</span><span class="sp">,</span>`,
+      `  <span class="sc">-- Running total across all orders</span>`,
+      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span>`,
+      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">ORDER BY</span> <span class="scl">o.purchase_date</span><span class="sp">)</span>   <span class="sk">AS</span> <span class="st">running_total</span><span class="sp">,</span>`,
+      `  <span class="sc">-- Running total per buyer</span>`,
+      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span>`,
       `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">s.region</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">s.sale_date</span>`,
-      `    <span class="sp">)</span>                              <span class="sk">AS</span> <span class="st">region_running_total</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">sales</span> <span class="st">s</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">s.region</span><span class="sp">,</span> <span class="scl">s.sale_date</span><span class="sp">;</span>`,
+      `      <span class="sk">PARTITION BY</span> <span class="scl">o.buyer_name</span>`,
+      `      <span class="sk">ORDER BY</span>     <span class="scl">o.purchase_date</span>`,
+      `    <span class="sp">)</span>                              <span class="sk">AS</span> <span class="st">buyer_running_total</span>`,
+      `<span class="sk">FROM</span>   <span class="stb">orders</span> <span class="st">o</span>`,
+      `<span class="sk">ORDER BY</span> <span class="scl">o.buyer_name</span><span class="sp">,</span> <span class="scl">o.purchase_date</span><span class="sp">;</span>`,
     ],
     queryId: 'sum-over',
-    sql: `SELECT s.sale_date, s.region, s.amount, SUM(s.amount) OVER (ORDER BY s.sale_date) AS running_total, SUM(s.amount) OVER (PARTITION BY s.region ORDER BY s.sale_date) AS region_running_total FROM sales s ORDER BY s.region, s.sale_date;`
+    sql: `SELECT o.purchase_date, o.buyer_name, o.purchase_price, SUM(o.purchase_price) OVER (ORDER BY o.purchase_date) AS running_total, SUM(o.purchase_price) OVER (PARTITION BY o.buyer_name ORDER BY o.purchase_date) AS buyer_running_total FROM orders o ORDER BY o.buyer_name, o.purchase_date;`
   }),
 
   /* ── AVG() OVER() ─────────────────────────────────── */
@@ -1072,26 +1072,26 @@ const VIEWS = {
     title: 'AVG() OVER()',
     description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">AVG() OVER()</code> computes a moving or partition average. A common pattern is a 3-row moving average using <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING</code> to smooth time-series data.',
     sqlLines: [
-      `<span class="sc">-- §8 · AVG() OVER() — moving average and dept baseline</span>`,
+      `<span class="sc">-- §8 · AVG() OVER() — moving average and global baseline</span>`,
       `<span class="sk">SELECT</span>`,
-      `  <span class="scl">s.sale_date</span><span class="sp">,</span>`,
-      `  <span class="scl">s.employee_id</span><span class="sp">,</span>`,
-      `  <span class="scl">s.amount</span><span class="sp">,</span>`,
+      `  <span class="scl">o.purchase_date</span><span class="sp">,</span>`,
+      `  <span class="scl">o.buyer_name</span><span class="sp">,</span>`,
+      `  <span class="scl">o.purchase_price</span><span class="sp">,</span>`,
       `  <span class="sc">-- 3-row symmetric moving average</span>`,
-      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">s.amount</span><span class="sp">)</span>`,
+      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span>`,
       `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">s.employee_id</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">s.sale_date</span>`,
+      `      <span class="sk">PARTITION BY</span> <span class="scl">o.buyer_name</span>`,
+      `      <span class="sk">ORDER BY</span>     <span class="scl">o.purchase_date</span>`,
       `      <span class="sk">ROWS BETWEEN</span> <span class="sn">1</span> <span class="sk">PRECEDING</span>`,
       `               <span class="sk">AND</span> <span class="sn">1</span> <span class="sk">FOLLOWING</span>`,
       `    <span class="sp">)</span>                              <span class="sk">AS</span> <span class="st">moving_avg_3</span><span class="sp">,</span>`,
-      `  <span class="sc">-- Global average across all sales</span>`,
-      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">s.amount</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>          <span class="sk">AS</span> <span class="st">global_avg</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">sales</span> <span class="st">s</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">s.employee_id</span><span class="sp">,</span> <span class="scl">s.sale_date</span><span class="sp">;</span>`,
+      `  <span class="sc">-- Global average across all orders</span>`,
+      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>          <span class="sk">AS</span> <span class="st">global_avg</span>`,
+      `<span class="sk">FROM</span>   <span class="stb">orders</span> <span class="st">o</span>`,
+      `<span class="sk">ORDER BY</span> <span class="scl">o.buyer_name</span><span class="sp">,</span> <span class="scl">o.purchase_date</span><span class="sp">;</span>`,
     ],
     queryId: 'avg-over',
-    sql: `SELECT s.sale_date, s.employee_id, s.amount, AVG(s.amount) OVER (PARTITION BY s.employee_id ORDER BY s.sale_date ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS moving_avg_3, AVG(s.amount) OVER() AS global_avg FROM sales s ORDER BY s.employee_id, s.sale_date;`
+    sql: `SELECT o.purchase_date, o.buyer_name, o.purchase_price, AVG(o.purchase_price) OVER (PARTITION BY o.buyer_name ORDER BY o.purchase_date ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS moving_avg_3, AVG(o.purchase_price) OVER() AS global_avg FROM orders o ORDER BY o.buyer_name, o.purchase_date;`
   }),
 };
 
@@ -1157,8 +1157,8 @@ function navigate(viewKey) {
 
     // Load table data immediately when table-view is opened
     if (viewKey === 'table-view') {
-      loadTableData('produits', renderEmployeesTable);
-      loadTableData('orders', renderSalesTable);
+      loadTableData('produits', renderProduitsTable, 4);
+      loadTableData('orders', renderOrdersTable, 6);
     }
   }
 }
@@ -1166,25 +1166,20 @@ function navigate(viewKey) {
 /* ═══════════════════════════════════════════════════════
    TABLE DATA LOADING
 ═══════════════════════════════════════════════════════ */
-async function loadTableData(tableName, renderFn) {
-  const statusEl = document.getElementById(`status-${tableName}`);
-  if (statusEl) statusEl.textContent = '⟳ loading…';
-
+async function loadTableData(tableName, renderFn, colCount) {
   const { rows, error } = await fetchTableData(tableName);
 
   if (error) {
     const tbody = document.getElementById(`tbody-${tableName}`);
-    if (tbody) tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${error.message}</td></tr>`;
-    if (statusEl) statusEl.textContent = '✕ not connected';
+    if (tbody) tbody.innerHTML = `<tr class="empty-row"><td colspan="${colCount}">${error.message}</td></tr>`;
     return;
   }
 
   renderFn(rows);
-  if (statusEl) statusEl.textContent = `✓ ${rows.length} rows`;
 }
 
-function renderEmployeesTable(rows) {
-  const tbody = document.getElementById('tbody-employees');
+function renderProduitsTable(rows) {
+  const tbody = document.getElementById('tbody-produits');
   if (!tbody) return;
   tbody.innerHTML = rows.map(p => `
     <tr>
@@ -1196,8 +1191,8 @@ function renderEmployeesTable(rows) {
   `).join('');
 }
 
-function renderSalesTable(rows) {
-  const tbody = document.getElementById('tbody-sales');
+function renderOrdersTable(rows) {
+  const tbody = document.getElementById('tbody-orders');
   if (!tbody) return;
   tbody.innerHTML = rows.map(o => `
     <tr>
