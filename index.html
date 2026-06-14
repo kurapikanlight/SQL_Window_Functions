@@ -38,6 +38,7 @@
       --txt-section:   #8B87D4;
       --syn-type:      #8BE9FD;
       --syn-number:    #BD93F9;
+      --syn-function:  #50FA7B;
 
       /* Borders */
       --border-light:  #E2DDD5;
@@ -287,7 +288,7 @@
     .concept-pill .pill-fn {
       font-family: 'Fira Code', monospace;
       font-size: 12.5px;
-      color: #50FA7B;
+      color: var(--syn-function);
       background: var(--bg-code);
       padding: 2px 7px;
       border-radius: 3px;
@@ -521,7 +522,7 @@
       font-family: 'Fira Code', monospace;
       font-size: 11px;
       background: var(--bg-sidebar);
-      color: #50FA7B;
+      color: var(--syn-function);
       padding: 2px 8px;
       border-radius: 3px;
     }
@@ -803,7 +804,7 @@ function mountMonacoEditor(queryId) {
     monacoEditorInstance.dispose();
   }
 
-  // Vérifier s'il y a du code sauvegardé dans le localStorage, sinon utiliser le commentaire par défaut
+  // Load from LocalStorage OR use default view data
   const savedSql = localStorage.getItem(`sql_snippet_${queryId}`);
   const sqlToLoad = savedSql !== null ? savedSql : VIEWS_DATA[queryId].sql;
 
@@ -825,9 +826,21 @@ function mountMonacoEditor(queryId) {
     acceptSuggestionOnEnter: "on"
   });
 
-  // Sauvegarder automatiquement dans le localStorage à chaque fois que vous tapez au clavier
+  // Save changes automatically
   monacoEditorInstance.onDidChangeModelContent(() => {
     localStorage.setItem(`sql_snippet_${queryId}`, monacoEditorInstance.getValue());
+  });
+
+  // SURPRISE 1: Cmd+Enter / Ctrl+Enter Keyboard shortcut to run queries!
+  monacoEditorInstance.addAction({
+    id: 'run-sql-query',
+    label: 'Run SQL Query',
+    keybindings: [ monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter ],
+    contextMenuGroupId: 'navigation',
+    contextMenuOrder: 1.5,
+    run: function(ed) {
+       handleRun(queryId);
+    }
   });
 }
 
@@ -1050,7 +1063,13 @@ function buildMonacoQueryView(queryId) {
             <div class="dot dot-y"></div>
             <div class="dot dot-g"></div>
           </div>
-          <div class="code-box-label">Monaco IDE · Powered by VS Code</div>
+          <div style="display:flex; align-items:center; gap: 16px;">
+            <button onclick="resetToLesson('${queryId}')" style="background:transparent; border:none; color:#8B9EC7; font-size:11px; cursor:pointer; font-family:'Fira Code', monospace; display:flex; align-items:center; gap:4px; transition: color 0.2s;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#8B9EC7'">
+              <svg style="width:12px;height:12px;fill:currentColor" viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 0 0-4.64 8.44l-1.4 1.4A7.47 7.47 0 0 1 1.5 8 6.5 6.5 0 1 1 8 14.5v1.5a8 8 0 1 0 0-16v2.5z"/></svg>
+              Reset to Lesson
+            </button>
+            <div class="code-box-label">Monaco IDE · Powered by VS Code</div>
+          </div>
         </div>
         
         <!-- MONACO TARGET CONTAINER -->
@@ -1058,11 +1077,11 @@ function buildMonacoQueryView(queryId) {
       </div>
 
       <div class="run-btn-row">
-        <button class="run-btn" id="runBtn-${queryId}" onclick="handleRun()">
+        <button class="run-btn" id="runBtn-${queryId}" onclick="handleRun('${queryId}')">
           <svg viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z"/></svg>
           RUN QUERY
         </button>
-        <span class="run-hint">Executes directly against connected Supabase backend</span>
+        <span class="run-hint">Executes directly against connected Supabase backend (Press <strong>Cmd/Ctrl + Enter</strong>)</span>
       </div>
 
       <div class="result-box" id="result-box-container">
@@ -1073,6 +1092,15 @@ function buildMonacoQueryView(queryId) {
   `;
 }
 
+// SURPRISE 3: Reset functionality
+function resetToLesson(queryId) {
+  if (confirm('Are you sure you want to reset this editor to the default lesson code? Your changes will be lost.')) {
+    localStorage.removeItem(`sql_snippet_${queryId}`);
+    if (monacoEditorInstance) {
+      monacoEditorInstance.setValue(VIEWS_DATA[queryId].sql);
+    }
+  }
+}
 
 /* ═══════════════════════════════════════════════════════
    NAVIGATION
@@ -1095,7 +1123,6 @@ function navigate(viewKey) {
       loadTablePage('orders', 1);
     }
   } else {
-    // Generate view and Mount Monaco
     main.innerHTML = buildMonacoQueryView(viewKey);
     mountMonacoEditor(viewKey);
   }
@@ -1110,11 +1137,9 @@ const PAGE_SIZE = 10;
 
 function renderSkeletonRows(tbody, colCount) {
   let skelHtml = '';
-  // Generate 5 skeleton rows
   for(let i=0; i<5; i++) {
     let tds = '';
     for(let j=0; j<colCount; j++) {
-      // Randomize the width of the skeleton box between 30% and 80%
       const randWidth = Math.floor(Math.random() * 50) + 30;
       tds += `<td><div class="skeleton-box" style="width: ${randWidth}%;"></div></td>`;
     }
@@ -1128,11 +1153,8 @@ async function loadTablePage(tableName, pageNum) {
   if (!tbody) return;
 
   const colCount = tableName === 'produits' ? 4 : 6;
-  
-  // Show elegant skeleton loading state
   renderSkeletonRows(tbody, colCount);
 
-  // Artificial slight delay to let user appreciate the skeleton UI before it flashes away too fast
   await new Promise(r => setTimeout(r, 400));
 
   const { rows, count, error } = await fetchTableData(tableName, pageNum, PAGE_SIZE);
@@ -1216,7 +1238,6 @@ async function handleRun() {
   const btn      = document.getElementById(`runBtn-${currentView}`);
   const resultEl = document.getElementById('result-box-container');
 
-  // Fetch code securely from the Monaco Editor instance
   if (!btn || !resultEl || !monacoEditorInstance) return;
   
   const sql = monacoEditorInstance.getValue().trim();
@@ -1262,7 +1283,12 @@ function renderPaginatedResult() {
   const slice = currentQueryData.slice(startIdx, startIdx + QUERY_PAGE_SIZE);
   const cols = Object.keys(currentQueryData[0]);
 
-  let html = `<div class="result-label">▸ Result — ${totalRows} row${totalRows !== 1 ? 's' : ''} returned</div>`;
+  // SURPRISE 2: CSV Export Button
+  let html = `<div class="result-label" style="display:flex; justify-content:space-between; align-items:center;">
+    <span>▸ Result — ${totalRows} row${totalRows !== 1 ? 's' : ''} returned</span>
+    <button onclick="exportToCSV()" style="background:#2563EB; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:10px; cursor:pointer; font-family:'Fira Code', monospace; transition:background 0.2s;" onmouseover="this.style.background='#1D4ED8'" onmouseout="this.style.background='#2563EB'">Download CSV ↓</button>
+  </div>`;
+  
   html += `<table class="result-table"><thead><tr>`;
   
   for (const c of cols) {
@@ -1271,7 +1297,6 @@ function renderPaginatedResult() {
   
   html += `</tr></thead><tbody>`;
 
-  // Wrap inside <td> to safely format Output
   for (const row of slice) {
     html += `<tr>`;
     for (const c of cols) {
@@ -1284,7 +1309,7 @@ function renderPaginatedResult() {
         html += `<td><span style="color:var(--syn-number)">${val.toLocaleString()}${suffix}</span></td>`;
       } else {
         let displayVal = val;
-        // Format ISO dates nicely (e.g. 2026-06-01T10:30:00 -> 2026-06-01 10:30:00)
+        // Format ISO dates nicely
         if (typeof val === 'string' && val.includes('T') && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
           displayVal = val.replace('T', ' ').split('.')[0];
         }
@@ -1297,7 +1322,6 @@ function renderPaginatedResult() {
 
   html += `</tbody></table>`;
   
-  // Custom Pagination Control specific to Output Box
   if (totalPages > 1) {
     html += `<div class="result-pagination">`;
     html += `<button class="result-page-btn" ${currentQueryPage === 1 ? 'disabled' : ''} onclick="changeResultPage(${currentQueryPage - 1})">&laquo; Prev</button>`;
@@ -1320,6 +1344,28 @@ function renderPaginatedResult() {
 function changeResultPage(page) {
   currentQueryPage = page;
   renderPaginatedResult();
+}
+
+function exportToCSV() {
+  if (!currentQueryData || currentQueryData.length === 0) return;
+  const keys = Object.keys(currentQueryData[0]);
+  
+  const csv = [
+    keys.join(','),
+    ...currentQueryData.map(row => keys.map(k => {
+      let val = row[k] === null ? '' : String(row[k]);
+      return `"${val.replace(/"/g, '""')}"`;
+    }).join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `sql_window_result_${new Date().getTime()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 /* ═══════════════════════════════════════════════════════
