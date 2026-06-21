@@ -10,6 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
+  <!-- Monaco Editor Loader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+
   <style>
     /* ─────────────────────────────────────────────
        CSS RESET & VARIABLES
@@ -22,7 +25,6 @@
       --bg-sidebar:    #1A1C2A;
       --bg-sidebar-h:  #252840;
       --bg-code:       #0D1117;
-      --bg-code-inner: #161B22;
       --bg-card:       #FFFFFF;
       --bg-run-btn:    #2563EB;
       --bg-run-hover:  #1D4ED8;
@@ -34,18 +36,9 @@
       --txt-sidebar:   #A8AABF;
       --txt-sidebar-a: #FFFFFF;
       --txt-section:   #8B87D4;
-
-      /* Syntax colors */
-      --syn-keyword:   #FF79C6;
-      --syn-function:  #50FA7B;
       --syn-type:      #8BE9FD;
-      --syn-string:    #F1FA8C;
       --syn-number:    #BD93F9;
-      --syn-operator:  #FF9F43;
-      --syn-comment:   #6272A4;
-      --syn-column:    #E2E8F0;
-      --syn-table:     #69FF94;
-      --syn-punct:     #9CA3AF;
+      --syn-function:  #50FA7B;
 
       /* Borders */
       --border-light:  #E2DDD5;
@@ -343,7 +336,7 @@
       line-height: 1.6;
     }
 
-    /* ── CODE BOX ── */
+    /* ── MONACO CODE BOX ── */
     .code-box {
       background: var(--bg-code);
       border: 1px solid var(--border-code);
@@ -382,30 +375,12 @@
       letter-spacing: 0.06em;
     }
 
-    .code-box-body {
-      background: var(--bg-code-inner);
-      padding: 24px 28px;
-      overflow-x: auto;
+    /* The actual Monaco Container */
+    .monaco-container {
+      width: 100%;
+      height: 280px; 
+      background: #1E1E1E; /* VS Code Default Dark */
     }
-
-    .code-box-body pre {
-      font-family: 'Fira Code', monospace;
-      font-size: 13.5px;
-      line-height: 1.8;
-      white-space: pre;
-    }
-
-    /* Syntax token classes */
-    .sk  { color: var(--syn-keyword);  font-weight: 500; } /* keyword */
-    .sf  { color: var(--syn-function); }                    /* function */
-    .st  { color: var(--syn-type);     }                    /* type/alias */
-    .ss  { color: var(--syn-string);   }                    /* string */
-    .sn  { color: var(--syn-number);   }                    /* number */
-    .so  { color: var(--syn-operator); }                    /* operator */
-    .sc  { color: var(--syn-comment);  font-style: italic;} /* comment */
-    .scl { color: var(--syn-column);   }                    /* column */
-    .stb { color: var(--syn-table);    }                    /* table/alias */
-    .sp  { color: var(--syn-punct);    }                    /* punctuation */
 
     /* ── RUN BUTTON ── */
     .run-btn-row {
@@ -440,22 +415,9 @@
     }
 
     .run-btn:active { transform: translateY(0); }
-
-    .run-btn svg {
-      width: 13px; height: 13px;
-      fill: currentColor;
-    }
-
-    .run-btn.loading {
-      opacity: 0.7;
-      pointer-events: none;
-    }
-
-    .run-hint {
-      font-family: 'Fira Code', monospace;
-      font-size: 11px;
-      color: #9CA3AF;
-    }
+    .run-btn svg { width: 13px; height: 13px; fill: currentColor; }
+    .run-btn.loading { opacity: 0.7; pointer-events: none; }
+    .run-hint { font-family: 'Fira Code', monospace; font-size: 11px; color: #9CA3AF; }
 
     /* ── RESULT BOX ── */
     .result-box {
@@ -472,11 +434,7 @@
       transition: border-color 0.3s;
     }
 
-    .result-box.has-result {
-      border-color: #2D3748;
-      color: #C5D0E6;
-    }
-
+    .result-box.has-result { border-color: #2D3748; color: #C5D0E6; }
     .result-box.has-error { border-color: #7F1D1D; color: #FCA5A5; }
 
     .result-box .result-label {
@@ -513,10 +471,32 @@
 
     .result-table tr:hover td { background: #131B2C; }
 
-    /* ── DATA TABLES (table view) ── */
+    /* ── RESULT PAGINATION ── */
+    .result-pagination {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 16px;
+    }
+    .result-page-btn {
+      background: #1A2235;
+      border: 1px solid #2D3748;
+      color: #C5D0E6;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+    .result-page-btn:hover:not(:disabled) { background: #252D42; }
+    .result-page-btn.active { background: var(--accent); color: #FFFFFF; border-color: var(--accent); }
+    .result-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── DATA TABLES (Table View & Pagination) ── */
     .table-view-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      flex-direction: column;
       gap: 28px;
     }
 
@@ -525,6 +505,8 @@
       border: 1px solid var(--border-light);
       border-radius: var(--radius-lg);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .data-table-header {
@@ -556,10 +538,11 @@
       margin-left: auto;
       font-size: 10px;
       font-family: 'Fira Code', monospace;
-      color: var(--txt-muted);
+      color: #10B981;
+      font-weight: 600;
     }
 
-    .data-table-wrap { overflow-x: auto; }
+    .data-table-wrap { overflow-x: auto; min-height: 250px; }
 
     .data-table {
       width: 100%;
@@ -590,7 +573,6 @@
 
     .data-table tbody tr:hover td { background: #FAFAF8; }
 
-    .data-table .loading-row td,
     .data-table .empty-row td {
       text-align: center;
       color: var(--txt-muted);
@@ -599,10 +581,7 @@
       font-family: 'Lora', serif;
     }
 
-    .td-num {
-      font-family: 'Fira Code', monospace;
-      color: #7C6FF7;
-    }
+    .td-num { font-family: 'Fira Code', monospace; color: #7C6FF7; }
 
     .td-tag {
       display: inline-block;
@@ -613,6 +592,47 @@
       font-family: 'Fira Code', monospace;
       font-size: 11px;
     }
+
+    /* ── SKELETON LOADING ── */
+    .skeleton-box {
+      height: 14px;
+      background: #E5E7EB;
+      border-radius: 4px;
+      animation: pulse 1.5s infinite;
+      display: inline-block;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── PAGINATION ── */
+    .pagination-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 16px;
+      background: #F8F7F4;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .page-btn {
+      background: #FFFFFF;
+      border: 1px solid #D1CDC4;
+      color: var(--txt-main);
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+
+    .page-btn:hover:not(:disabled) { background: #F0EDE8; }
+    .page-btn.active { background: var(--accent); color: #FFFFFF; border-color: var(--accent); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ── SPINNER ── */
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -696,9 +716,8 @@
     </nav>
 
     <div class="sidebar-footer">
-      <!-- Supabase URL: https://ugzqdubwdrryezxhuacr.supabase.co -->
-      Connected: Supabase<br/>
-      Project: analytical-queries
+      Connected: Supabase REST API<br/>
+      Project: ugzqdubwdrryezxhuacr
     </div>
   </aside>
 
@@ -712,84 +731,221 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════
-   SUPABASE CLIENT INITIALIZATION
-   API URL: https://ugzqdubwdrryezxhuacr.supabase.co  (see sidebar footer comment)
+   MONACO EDITOR SETUP (WITH CUSTOM SQL COMPLETION)
+═══════════════════════════════════════════════════════ */
+let monacoEditorInstance = null;
+let monacoIsReady = false;
+
+require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }});
+
+require(['vs/editor/editor.main'], function() {
+  monacoIsReady = true;
+
+  // Custom Autocomplete Provider for SQL
+  monaco.languages.registerCompletionItemProvider('sql', {
+    provideCompletionItems: function(model, position) {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn
+      };
+      
+      const suggestions = [
+        // SQL Keywords
+        { label: 'SELECT', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'SELECT ', range: range },
+        { label: 'FROM', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'FROM ', range: range },
+        { label: 'WHERE', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'WHERE ', range: range },
+        { label: 'OVER', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'OVER(', range: range },
+        { label: 'PARTITION BY', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'PARTITION BY ', range: range },
+        { label: 'ORDER BY', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'ORDER BY ', range: range },
+        { label: 'GROUP BY', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'GROUP BY ', range: range },
+        { label: 'DESC', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'DESC', range: range },
+        { label: 'ASC', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'ASC', range: range },
+        
+        // Window Functions
+        { label: 'ROW_NUMBER', kind: monaco.languages.CompletionItemKind.Function, insertText: 'ROW_NUMBER()', range: range },
+        { label: 'RANK', kind: monaco.languages.CompletionItemKind.Function, insertText: 'RANK()', range: range },
+        { label: 'DENSE_RANK', kind: monaco.languages.CompletionItemKind.Function, insertText: 'DENSE_RANK()', range: range },
+        { label: 'SUM', kind: monaco.languages.CompletionItemKind.Function, insertText: 'SUM(${1:col})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range: range },
+        { label: 'AVG', kind: monaco.languages.CompletionItemKind.Function, insertText: 'AVG(${1:col})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range: range },
+        { label: 'LAG', kind: monaco.languages.CompletionItemKind.Function, insertText: 'LAG(${1:col}, 1)', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range: range },
+        { label: 'LEAD', kind: monaco.languages.CompletionItemKind.Function, insertText: 'LEAD(${1:col}, 1)', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range: range },
+        
+        // Tables & Schema
+        { label: 'produits', kind: monaco.languages.CompletionItemKind.Class, insertText: 'produits', range: range },
+        { label: 'orders', kind: monaco.languages.CompletionItemKind.Class, insertText: 'orders', range: range },
+        { label: 'name', kind: monaco.languages.CompletionItemKind.Field, insertText: 'name', range: range },
+        { label: 'categorie', kind: monaco.languages.CompletionItemKind.Field, insertText: 'categorie', range: range },
+        { label: 'price', kind: monaco.languages.CompletionItemKind.Field, insertText: 'price', range: range },
+        { label: 'buyer_name', kind: monaco.languages.CompletionItemKind.Field, insertText: 'buyer_name', range: range },
+        { label: 'product_name', kind: monaco.languages.CompletionItemKind.Field, insertText: 'product_name', range: range },
+        { label: 'quantity', kind: monaco.languages.CompletionItemKind.Field, insertText: 'quantity', range: range },
+        { label: 'purchase_date', kind: monaco.languages.CompletionItemKind.Field, insertText: 'purchase_date', range: range },
+        { label: 'purchase_price', kind: monaco.languages.CompletionItemKind.Field, insertText: 'purchase_price', range: range },
+      ];
+      return { suggestions: suggestions };
+    }
+  });
+
+  if (currentView !== 'landing' && currentView !== 'table-view') {
+    mountMonacoEditor(currentView);
+  }
+});
+
+function mountMonacoEditor(queryId) {
+  if (!monacoIsReady) return;
+
+  const container = document.getElementById(`monaco-editor-${queryId}`);
+  if (!container) return;
+
+  if (monacoEditorInstance) {
+    monacoEditorInstance.dispose();
+  }
+
+  // Load from LocalStorage OR use default view data
+  const savedSql = localStorage.getItem(`sql_snippet_${queryId}`);
+  const sqlToLoad = savedSql !== null ? savedSql : VIEWS_DATA[queryId].sql;
+
+  monacoEditorInstance = monaco.editor.create(container, {
+    value: sqlToLoad,
+    language: 'sql',
+    theme: 'vs-dark',
+    automaticLayout: true,
+    minimap: { enabled: false },
+    fontSize: 14,
+    fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
+    scrollBeyondLastLine: false,
+    padding: { top: 16, bottom: 16 },
+    renderLineHighlight: 'all',
+    suggestOnTriggerCharacters: true,
+    quickSuggestions: true,
+    tabCompletion: 'on',
+    wordBasedSuggestions: true,
+    acceptSuggestionOnEnter: "on"
+  });
+
+  // Save changes automatically
+  monacoEditorInstance.onDidChangeModelContent(() => {
+    localStorage.setItem(`sql_snippet_${queryId}`, monacoEditorInstance.getValue());
+  });
+
+  // SURPRISE 1: Cmd+Enter / Ctrl+Enter Keyboard shortcut to run queries!
+  monacoEditorInstance.addAction({
+    id: 'run-sql-query',
+    label: 'Run SQL Query',
+    keybindings: [ monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter ],
+    contextMenuGroupId: 'navigation',
+    contextMenuOrder: 1.5,
+    run: function(ed) {
+       handleRun(queryId);
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   SUPABASE REST API INTEGRATION
 ═══════════════════════════════════════════════════════ */
 const SUPABASE_KEY = 'sb_publishable_vGi_WmNN0wyyYrw9DHBA_A_NsmE1E34';
 const SUPABASE_URL = 'https://ugzqdubwdrryezxhuacr.supabase.co';
 
-/**
- * Execute a raw SQL query via Supabase REST RPC endpoint.
- * Replace `sql_query` with the actual RPC function name you set up in Supabase.
- * @param {string} sql - The SQL query string to execute
- * @returns {Promise<{data: any, error: any}>}
- */
 async function runSupabaseQuery(sql) {
-  // ── PLACEHOLDER: paste your Supabase fetch logic here ──
-  // Example using a Supabase RPC function:
-  //
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/run_query`, {
-     method: 'POST',
-     headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`
-    },
-     body: JSON.stringify({ query: sql })
-   });
-   const data = await res.json();
-   console.log(data)
-   return { data, error: res.ok ? null : data };
-
-  // SIMULATION (remove when real connection is wired):
- 
-}
-
-/**
- * Fetch table rows directly via Supabase REST.
- * @param {string} tableName - The Supabase table name
- * @returns {Promise<{rows: any[], error: any}>}
- */
-async function fetchTableData(tableName) {
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?limit=20`, {
-      method: 'GET', // Optionnel mais recommandé pour la clarté
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/executer_sql_brut`, {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json' // Recommandé par l'API REST de Supabase
-      }
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      },
+      body: JSON.stringify({ requete: sql })
     });
-
-    // 1. Extraction sécurisée du JSON
+    
     const data = await res.json();
-
-    // 2. Vérification du statut de la réponse HTTP
-    if (!res.ok) {
-      return {
-        rows: [],
-        error: { message: data.message || `Erreur HTTP ${res.status}` }
-      };
-    }
-
-    return { rows: data, error: null };
-
+    return { data, error: res.ok ? null : data };
   } catch (err) {
-    // 3. Capture des erreurs réseau (ex: pas d'internet) ou JSON invalide
-    return {
-      rows: [],
-      error: { message: err.message || 'Erreur réseau inconnue' }
-    };
+    return { data: null, error: { message: err.message || 'Network error executing query.' } };
   }
 }
 
+async function fetchTableData(tableName, page = 1, pageSize = 10) {
+  try {
+    const offset = (page - 1) * pageSize;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?select=*&limit=${pageSize}&offset=${offset}`, {
+      method: 'GET',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'count=exact'
+      }
+    });
+
+    const data = await res.json();
+    
+    if (!res.ok) {
+      return { rows: [], count: 0, error: { message: data.message || `HTTP Error ${res.status}` } };
+    }
+
+    const contentRange = res.headers.get('content-range');
+    const totalCount = contentRange ? parseInt(contentRange.split('/')[1]) : 0;
+
+    return { rows: data, count: totalCount, error: null };
+
+  } catch (err) {
+    return { rows: [], count: 0, error: { message: err.message || 'Unknown network error' } };
+  }
+}
 
 /* ═══════════════════════════════════════════════════════
-   CONTENT DEFINITIONS
+   CONTENT METADATA AND HTML TEMPLATES
 ═══════════════════════════════════════════════════════ */
-const VIEWS = {
 
-  /* ── LANDING ─────────────────────────────────────── */
+const VIEWS_DATA = {
+  'over-global': {
+    section: '§1', title: 'OVER() — Global Window',
+    description: 'The bare <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">OVER()</code> clause with no arguments defines a window spanning the entire result set. Every row sees the same aggregate value computed across all rows simultaneously.',
+    sql: `-- §1 · OVER() with no partition — global aggregate\n`
+  },
+  'partition-by': {
+    section: '§2', title: 'PARTITION BY',
+    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">PARTITION BY</code> divides the result set into independent sub-windows. The aggregate resets for each partition, allowing per-group analytics without collapsing rows.',
+    sql: `-- §2 · PARTITION BY categorie — per-category aggregates\n`
+  },
+  'order-by': {
+    section: '§3', title: 'ORDER BY in OVER()',
+    description: 'Adding <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> inside the window frame turns an aggregate into a running (cumulative) computation. The window grows one row at a time following the specified sort order.',
+    sql: `-- §3 · ORDER BY inside OVER() — cumulative revenue over time\n`
+  },
+  'row-number': {
+    section: '§4', title: 'ROW_NUMBER()',
+    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ROW_NUMBER()</code> assigns a unique sequential integer to each row within its partition, starting at 1. Ties receive distinct numbers.',
+    sql: `-- §4 · ROW_NUMBER() — rank products within each category by price\n`
+  },
+  'rank-dense': {
+    section: '§5', title: 'RANK() and DENSE_RANK()',
+    description: 'Both assign ranks; the difference is how they handle ties. <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">RANK()</code> skips numbers after a tie (1, 2, 2, 4), while <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">DENSE_RANK()</code> never skips (1, 2, 2, 3).',
+    sql: `-- §5 · RANK() vs DENSE_RANK() — compare tie-handling on price\n`
+  },
+  'lag-lead': {
+    section: '§6', title: 'LAG() and LEAD()',
+    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">LAG(col, n)</code> looks backward <em>n</em> rows; <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">LEAD(col, n)</code> looks forward. Both accept an optional default for when the offset falls outside the partition boundary.',
+    sql: `-- §6 · LAG() and LEAD() — compare each buyer's adjacent orders\n`
+  },
+  'sum-over': {
+    section: '§7', title: 'SUM() OVER()',
+    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">SUM() OVER()</code> computes a cumulative or partitioned total without collapsing the row set. Pair it with <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">PARTITION BY</code> to reset per group, or with <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> for a running total.',
+    sql: `-- §7 · SUM() OVER() — running total and per-buyer spend\n`
+  },
+  'avg-over': {
+    section: '§8', title: 'AVG() OVER()',
+    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">AVG() OVER()</code> computes a moving or partition average. A common pattern is a 3-row moving average using <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING</code> to smooth time-series data.',
+    sql: `-- §8 · AVG() OVER() — moving average and global baseline\n`
+  }
+};
+
+const RENDERERS = {
   landing: () => `
     <section class="hero-section">
       <div class="hero-eyebrow">§ Introduction</div>
@@ -810,7 +966,7 @@ const VIEWS = {
           <em>The Table View</em>, then progress through the window clauses and analytical functions.
         </p>
         <p>
-          Each section contains a syntax-highlighted query you can execute directly against the
+          Each section contains a true <strong>VS Code-powered IDE</strong> snippet you can execute directly against the
           connected database. Results appear inline below the query — no context switching required.
         </p>
       </div>
@@ -835,14 +991,12 @@ const VIEWS = {
     </section>
   `,
 
-  /* ── TABLE VIEW ───────────────────────────────────── */
   'table-view': () => `
     <div class="section-page">
       <div class="section-eyebrow">§0 — Data Foundation</div>
       <h2 class="section-heading">The Table View</h2>
       <p class="section-description">
-        Inspect the raw source tables powering the analytical queries below. Connect Supabase to
-        populate live rows; placeholder schema is shown until the connection is active.
+        Inspect the raw source tables powering the analytical queries below. Data is live from your Supabase connected backend with server-side pagination.
       </p>
 
       <div class="table-view-grid">
@@ -850,8 +1004,8 @@ const VIEWS = {
         <div class="data-table-card">
           <div class="data-table-header">
             <span class="tbl-icon">TABLE</span>
-            <span class="tbl-name">Produits</span>
-            
+            <span class="tbl-name">produits</span>
+            <span class="tbl-status">Live API Connected</span>
           </div>
           <div class="data-table-wrap">
             <table class="data-table" id="tbl-produits">
@@ -861,18 +1015,19 @@ const VIEWS = {
                 </tr>
               </thead>
               <tbody id="tbody-produits">
-                <tr class="loading-row"><td colspan="4">Loading from Supabase…</td></tr>
+                <!-- Skeleton rows will go here -->
               </tbody>
             </table>
           </div>
+          <div class="pagination-container" id="pagination-produits"></div>
         </div>
 
         <!-- TABLE 2 -->
         <div class="data-table-card">
           <div class="data-table-header">
             <span class="tbl-icon">TABLE</span>
-            <span class="tbl-name">Orders</span>
-            
+            <span class="tbl-name">orders</span>
+            <span class="tbl-status">Live API Connected</span>
           </div>
           <div class="data-table-wrap">
             <table class="data-table" id="tbl-orders">
@@ -882,228 +1037,24 @@ const VIEWS = {
                 </tr>
               </thead>
               <tbody id="tbody-orders">
-                <tr class="loading-row"><td colspan="6">Loading from Supabase…</td></tr>
+                <!-- Skeleton rows will go here -->
               </tbody>
             </table>
           </div>
+          <div class="pagination-container" id="pagination-orders"></div>
         </div>
       </div>
     </div>
-  `,
-
-  /* ── OVER() GLOBAL ────────────────────────────────── */
-  'over-global': () => buildQueryView({
-    section: '§1',
-    title: 'OVER() — Global Window',
-    description: 'The bare <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">OVER()</code> clause with no arguments defines a window spanning the entire result set. Every row sees the same aggregate value computed across all rows simultaneously.',
-    sqlLines: [
-      `<span class="sc">-- §1 · OVER() with no partition — global aggregate</span>`,
-      `<span class="sk">SELECT</span>`,
-      `  <span class="scl">p.name</span><span class="sp">,</span>`,
-      `  <span class="scl">p.categorie</span><span class="sp">,</span>`,
-      `  <span class="scl">p.price</span><span class="sp">,</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">p.price</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">total_price_all</span><span class="sp">,</span>`,
-      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">p.price</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">avg_price_all</span><span class="sp">,</span>`,
-      `  <span class="sf">COUNT</span><span class="sp">(*)</span>        <span class="sk">OVER</span><span class="sp">()</span>   <span class="sk">AS</span> <span class="st">total_products</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">produits</span> <span class="st">p</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">p.price</span> <span class="sk">DESC</span><span class="sp">;</span>`,
-    ],
-    queryId: 'over-global',
-    sql: `SELECT p.name, p.categorie, p.price, SUM(p.price) OVER() AS total_price_all, AVG(p.price) OVER() AS avg_price_all, COUNT(*) OVER() AS total_products FROM produits p ORDER BY p.price DESC;`
-  }),
-
-  /* ── PARTITION BY ─────────────────────────────────── */
-  'partition-by': () => buildQueryView({
-    section: '§2',
-    title: 'PARTITION BY',
-    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">PARTITION BY</code> divides the result set into independent sub-windows. The aggregate resets for each partition, allowing per-group analytics without collapsing rows.',
-    sqlLines: [
-      `<span class="sc">-- §2 · PARTITION BY categorie — per-category aggregates</span>`,
-      `<span class="sk">SELECT</span>`,
-      `  <span class="scl">p.name</span><span class="sp">,</span>`,
-      `  <span class="scl">p.categorie</span><span class="sp">,</span>`,
-      `  <span class="scl">p.price</span><span class="sp">,</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">p.price</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">categorie_total</span><span class="sp">,</span>`,
-      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">p.price</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">categorie_avg</span><span class="sp">,</span>`,
-      `  <span class="sf">COUNT</span><span class="sp">(*)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span><span class="sp">)</span>  <span class="sk">AS</span> <span class="st">categorie_count</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">produits</span> <span class="st">p</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">p.categorie</span><span class="sp">,</span> <span class="scl">p.price</span> <span class="sk">DESC</span><span class="sp">;</span>`,
-    ],
-    queryId: 'partition-by',
-    sql: `SELECT p.name, p.categorie, p.price, SUM(p.price) OVER (PARTITION BY p.categorie) AS categorie_total, AVG(p.price) OVER (PARTITION BY p.categorie) AS categorie_avg, COUNT(*) OVER (PARTITION BY p.categorie) AS categorie_count FROM produits p ORDER BY p.categorie, p.price DESC;`
-  }),
-
-  /* ── ORDER BY IN OVER() ───────────────────────────── */
-  'order-by': () => buildQueryView({
-    section: '§3',
-    title: 'ORDER BY in OVER()',
-    description: 'Adding <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> inside the window frame turns an aggregate into a running (cumulative) computation. The window grows one row at a time following the specified sort order.',
-    sqlLines: [
-      `<span class="sc">-- §3 · ORDER BY inside OVER() — cumulative revenue over time</span>`,
-      `<span class="sk">SELECT</span>`,
-      `  <span class="scl">o.purchase_date</span><span class="sp">,</span>`,
-      `  <span class="scl">o.buyer_name</span><span class="sp">,</span>`,
-      `  <span class="scl">o.purchase_price</span><span class="sp">,</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">ORDER BY</span> <span class="scl">o.purchase_date</span>`,
-      `      <span class="sk">ROWS BETWEEN UNBOUNDED PRECEDING</span>`,
-      `           <span class="sk">AND</span> <span class="sk">CURRENT ROW</span>`,
-      `    <span class="sp">)</span>  <span class="sk">AS</span> <span class="st">running_total</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">orders</span> <span class="st">o</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">o.purchase_date</span><span class="sp">;</span>`,
-    ],
-    queryId: 'order-by',
-    sql: `SELECT o.purchase_date, o.buyer_name, o.purchase_price, SUM(o.purchase_price) OVER (ORDER BY o.purchase_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total FROM orders o ORDER BY o.purchase_date;`
-  }),
-
-  /* ── ROW_NUMBER() ─────────────────────────────────── */
-  'row-number': () => buildQueryView({
-    section: '§4',
-    title: 'ROW_NUMBER()',
-    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ROW_NUMBER()</code> assigns a unique sequential integer to each row within its partition, starting at 1. Ties receive distinct numbers — order between tied rows is not guaranteed unless a fully deterministic <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> is used.',
-    sqlLines: [
-      `<span class="sc">-- §4 · ROW_NUMBER() — rank products within each category by price</span>`,
-      `<span class="sk">SELECT</span>`,
-      `  <span class="scl">p.name</span><span class="sp">,</span>`,
-      `  <span class="scl">p.categorie</span><span class="sp">,</span>`,
-      `  <span class="scl">p.price</span><span class="sp">,</span>`,
-      `  <span class="sf">ROW_NUMBER</span><span class="sp">()</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">p.price</span> <span class="sk">DESC</span>`,
-      `    <span class="sp">)</span>  <span class="sk">AS</span> <span class="st">row_num</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">produits</span> <span class="st">p</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">p.categorie</span><span class="sp">,</span> <span class="st">row_num</span><span class="sp">;</span>`,
-    ],
-    queryId: 'row-number',
-    sql: `SELECT p.name, p.categorie, p.price, ROW_NUMBER() OVER (PARTITION BY p.categorie ORDER BY p.price DESC) AS row_num FROM produits p ORDER BY p.categorie, row_num;`
-  }),
-
-  /* ── RANK AND DENSE_RANK ──────────────────────────── */
-  'rank-dense': () => buildQueryView({
-    section: '§5',
-    title: 'RANK() and DENSE_RANK()',
-    description: 'Both assign ranks; the difference is how they handle ties. <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">RANK()</code> skips numbers after a tie (1, 2, 2, 4), while <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">DENSE_RANK()</code> never skips (1, 2, 2, 3).',
-    sqlLines: [
-      `<span class="sc">-- §5 · RANK() vs DENSE_RANK() — compare tie-handling on price</span>`,
-      `<span class="sk">SELECT</span>`,
-      `  <span class="scl">p.name</span><span class="sp">,</span>`,
-      `  <span class="scl">p.categorie</span><span class="sp">,</span>`,
-      `  <span class="scl">p.price</span><span class="sp">,</span>`,
-      `  <span class="sf">RANK</span><span class="sp">()</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">p.price</span> <span class="sk">DESC</span>`,
-      `    <span class="sp">)</span>  <span class="sk">AS</span> <span class="st">rank</span><span class="sp">,</span>`,
-      `  <span class="sf">DENSE_RANK</span><span class="sp">()</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">p.categorie</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">p.price</span> <span class="sk">DESC</span>`,
-      `    <span class="sp">)</span>  <span class="sk">AS</span> <span class="st">dense_rank</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">produits</span> <span class="st">p</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">p.categorie</span><span class="sp">,</span> <span class="st">rank</span><span class="sp">;</span>`,
-    ],
-    queryId: 'rank-dense',
-    sql: `SELECT p.name, p.categorie, p.price, RANK() OVER (PARTITION BY p.categorie ORDER BY p.price DESC) AS rank, DENSE_RANK() OVER (PARTITION BY p.categorie ORDER BY p.price DESC) AS dense_rank FROM produits p ORDER BY p.categorie, rank;`
-  }),
-
-  /* ── LAG AND LEAD ─────────────────────────────────── */
-  'lag-lead': () => buildQueryView({
-    section: '§6',
-    title: 'LAG() and LEAD()',
-    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">LAG(col, n)</code> looks backward <em>n</em> rows; <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">LEAD(col, n)</code> looks forward. Both accept an optional default for when the offset falls outside the partition boundary.',
-    sqlLines: [
-      `<span class="sc">-- §6 · LAG() and LEAD() — compare each buyer's adjacent orders</span>`,
-      `<span class="sk">SELECT</span>`,
-      `  <span class="scl">o.purchase_date</span><span class="sp">,</span>`,
-      `  <span class="scl">o.buyer_name</span><span class="sp">,</span>`,
-      `  <span class="scl">o.purchase_price</span>                      <span class="sk">AS</span> <span class="st">current_order</span><span class="sp">,</span>`,
-      `  <span class="sf">LAG</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">,</span> <span class="sn">1</span><span class="sp">,</span> <span class="sn">0</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">o.buyer_name</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">o.purchase_date</span>`,
-      `    <span class="sp">)</span>                                    <span class="sk">AS</span> <span class="st">prev_order</span><span class="sp">,</span>`,
-      `  <span class="sf">LEAD</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">,</span> <span class="sn">1</span><span class="sp">,</span> <span class="sn">0</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">o.buyer_name</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">o.purchase_date</span>`,
-      `    <span class="sp">)</span>                                    <span class="sk">AS</span> <span class="st">next_order</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">orders</span> <span class="st">o</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">o.buyer_name</span><span class="sp">,</span> <span class="scl">o.purchase_date</span><span class="sp">;</span>`,
-    ],
-    queryId: 'lag-lead',
-    sql: `SELECT o.purchase_date, o.buyer_name, o.purchase_price AS current_order, LAG(o.purchase_price, 1, 0) OVER (PARTITION BY o.buyer_name ORDER BY o.purchase_date) AS prev_order, LEAD(o.purchase_price, 1, 0) OVER (PARTITION BY o.buyer_name ORDER BY o.purchase_date) AS next_order FROM orders o ORDER BY o.buyer_name, o.purchase_date;`
-  }),
-
-  /* ── SUM() OVER() ─────────────────────────────────── */
-  'sum-over': () => buildQueryView({
-    section: '§7',
-    title: 'SUM() OVER()',
-    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">SUM() OVER()</code> computes a cumulative or partitioned total without collapsing the row set. Pair it with <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">PARTITION BY</code> to reset per group, or with <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ORDER BY</code> for a running total.',
-    sqlLines: [
-      `<span class="sc">-- §7 · SUM() OVER() — running total and per-buyer spend</span>`,
-      `<span class="sk">SELECT</span>`,
-      `  <span class="scl">o.purchase_date</span><span class="sp">,</span>`,
-      `  <span class="scl">o.buyer_name</span><span class="sp">,</span>`,
-      `  <span class="scl">o.purchase_price</span><span class="sp">,</span>`,
-      `  <span class="sc">-- Running total across all orders</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span><span class="sk">ORDER BY</span> <span class="scl">o.purchase_date</span><span class="sp">)</span>   <span class="sk">AS</span> <span class="st">running_total</span><span class="sp">,</span>`,
-      `  <span class="sc">-- Running total per buyer</span>`,
-      `  <span class="sf">SUM</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">o.buyer_name</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">o.purchase_date</span>`,
-      `    <span class="sp">)</span>                              <span class="sk">AS</span> <span class="st">buyer_running_total</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">orders</span> <span class="st">o</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">o.buyer_name</span><span class="sp">,</span> <span class="scl">o.purchase_date</span><span class="sp">;</span>`,
-    ],
-    queryId: 'sum-over',
-    sql: `SELECT o.purchase_date, o.buyer_name, o.purchase_price, SUM(o.purchase_price) OVER (ORDER BY o.purchase_date) AS running_total, SUM(o.purchase_price) OVER (PARTITION BY o.buyer_name ORDER BY o.purchase_date) AS buyer_running_total FROM orders o ORDER BY o.buyer_name, o.purchase_date;`
-  }),
-
-  /* ── AVG() OVER() ─────────────────────────────────── */
-  'avg-over': () => buildQueryView({
-    section: '§8',
-    title: 'AVG() OVER()',
-    description: '<code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">AVG() OVER()</code> computes a moving or partition average. A common pattern is a 3-row moving average using <code style="font-family:\'Fira Code\',monospace;font-size:13px;color:var(--accent)">ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING</code> to smooth time-series data.',
-    sqlLines: [
-      `<span class="sc">-- §8 · AVG() OVER() — moving average and global baseline</span>`,
-      `<span class="sk">SELECT</span>`,
-      `  <span class="scl">o.purchase_date</span><span class="sp">,</span>`,
-      `  <span class="scl">o.buyer_name</span><span class="sp">,</span>`,
-      `  <span class="scl">o.purchase_price</span><span class="sp">,</span>`,
-      `  <span class="sc">-- 3-row symmetric moving average</span>`,
-      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span>`,
-      `    <span class="sk">OVER</span> <span class="sp">(</span>`,
-      `      <span class="sk">PARTITION BY</span> <span class="scl">o.buyer_name</span>`,
-      `      <span class="sk">ORDER BY</span>     <span class="scl">o.purchase_date</span>`,
-      `      <span class="sk">ROWS BETWEEN</span> <span class="sn">1</span> <span class="sk">PRECEDING</span>`,
-      `               <span class="sk">AND</span> <span class="sn">1</span> <span class="sk">FOLLOWING</span>`,
-      `    <span class="sp">)</span>                              <span class="sk">AS</span> <span class="st">moving_avg_3</span><span class="sp">,</span>`,
-      `  <span class="sc">-- Global average across all orders</span>`,
-      `  <span class="sf">AVG</span><span class="sp">(</span><span class="scl">o.purchase_price</span><span class="sp">)</span> <span class="sk">OVER</span><span class="sp">()</span>          <span class="sk">AS</span> <span class="st">global_avg</span>`,
-      `<span class="sk">FROM</span>   <span class="stb">orders</span> <span class="st">o</span>`,
-      `<span class="sk">ORDER BY</span> <span class="scl">o.buyer_name</span><span class="sp">,</span> <span class="scl">o.purchase_date</span><span class="sp">;</span>`,
-    ],
-    queryId: 'avg-over',
-    sql: `SELECT o.purchase_date, o.buyer_name, o.purchase_price, AVG(o.purchase_price) OVER (PARTITION BY o.buyer_name ORDER BY o.purchase_date ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS moving_avg_3, AVG(o.purchase_price) OVER() AS global_avg FROM orders o ORDER BY o.buyer_name, o.purchase_date;`
-  }),
+  `
 };
 
-/* ═══════════════════════════════════════════════════════
-   BUILD HELPERS
-═══════════════════════════════════════════════════════ */
-function buildQueryView({ section, title, description, sqlLines, queryId, sql }) {
+function buildMonacoQueryView(queryId) {
+  const data = VIEWS_DATA[queryId];
   return `
     <div class="section-page">
-      <div class="section-eyebrow">${section} — Window Functions</div>
-      <h2 class="section-heading">${title}</h2>
-      <p class="section-description">${description}</p>
+      <div class="section-eyebrow">${data.section} — Window Functions</div>
+      <h2 class="section-heading">${data.title}</h2>
+      <p class="section-description">${data.description}</p>
 
       <div class="code-box">
         <div class="code-box-header">
@@ -1112,27 +1063,43 @@ function buildQueryView({ section, title, description, sqlLines, queryId, sql })
             <div class="dot dot-y"></div>
             <div class="dot dot-g"></div>
           </div>
-          <div class="code-box-label">SQL · PostgreSQL</div>
+          <div style="display:flex; align-items:center; gap: 16px;">
+            <button onclick="resetToLesson('${queryId}')" style="background:transparent; border:none; color:#8B9EC7; font-size:11px; cursor:pointer; font-family:'Fira Code', monospace; display:flex; align-items:center; gap:4px; transition: color 0.2s;" onmouseover="this.style.color='#FFFFFF'" onmouseout="this.style.color='#8B9EC7'">
+              <svg style="width:12px;height:12px;fill:currentColor" viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 0 0-4.64 8.44l-1.4 1.4A7.47 7.47 0 0 1 1.5 8 6.5 6.5 0 1 1 8 14.5v1.5a8 8 0 1 0 0-16v2.5z"/></svg>
+              Reset to Lesson
+            </button>
+            <div class="code-box-label">Monaco IDE · Powered by VS Code</div>
+          </div>
         </div>
-        <div class="code-box-body">
-          <pre>${sqlLines.join('\n')}</pre>
-        </div>
+        
+        <!-- MONACO TARGET CONTAINER -->
+        <div id="monaco-editor-${queryId}" class="monaco-container"></div>
       </div>
 
       <div class="run-btn-row">
-        <button class="run-btn" id="runBtn-${queryId}" onclick="handleRun('${queryId}', \`${sql.replace(/`/g, '\\`')}\`)">
+        <button class="run-btn" id="runBtn-${queryId}" onclick="handleRun('${queryId}')">
           <svg viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z"/></svg>
-          RUN
+          RUN QUERY
         </button>
-        <span class="run-hint">Executes against connected Supabase database</span>
+        <span class="run-hint">Executes directly against connected Supabase backend (Press <strong>Cmd/Ctrl + Enter</strong>)</span>
       </div>
 
-      <div class="result-box" id="result-${queryId}">
+      <div class="result-box" id="result-box-container">
         <div class="result-label">▸ Output</div>
         <span style="color:#3D4060;font-size:12px;">Press RUN to execute the query above.</span>
       </div>
     </div>
   `;
+}
+
+// SURPRISE 3: Reset functionality
+function resetToLesson(queryId) {
+  if (confirm('Are you sure you want to reset this editor to the default lesson code? Your changes will be lost.')) {
+    localStorage.removeItem(`sql_snippet_${queryId}`);
+    if (monacoEditorInstance) {
+      monacoEditorInstance.setValue(VIEWS_DATA[queryId].sql);
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1143,50 +1110,100 @@ let currentView = 'landing';
 function navigate(viewKey) {
   currentView = viewKey;
 
-  // Update sidebar active state
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.view === viewKey);
   });
 
-  // Render view
   const main = document.getElementById('mainContent');
-  const renderer = VIEWS[viewKey];
-  if (renderer) {
-    main.innerHTML = renderer();
-    main.scrollTop = 0;
-
-    // Load table data immediately when table-view is opened
+  
+  if (viewKey === 'landing' || viewKey === 'table-view') {
+    main.innerHTML = RENDERERS[viewKey]();
     if (viewKey === 'table-view') {
-      loadTableData('produits', renderProduitsTable, 4);
-      loadTableData('orders', renderOrdersTable, 6);
+      loadTablePage('produits', 1);
+      loadTablePage('orders', 1);
     }
+  } else {
+    main.innerHTML = buildMonacoQueryView(viewKey);
+    mountMonacoEditor(viewKey);
   }
+  
+  main.scrollTop = 0;
 }
 
 /* ═══════════════════════════════════════════════════════
-   TABLE DATA LOADING
+   TABLE DATA LOADING, SKELETONS & PAGINATION
 ═══════════════════════════════════════════════════════ */
-async function loadTableData(tableName, renderFn, colCount) {
-  const { rows, error } = await fetchTableData(tableName);
+const PAGE_SIZE = 10; 
+
+function renderSkeletonRows(tbody, colCount) {
+  let skelHtml = '';
+  for(let i=0; i<5; i++) {
+    let tds = '';
+    for(let j=0; j<colCount; j++) {
+      const randWidth = Math.floor(Math.random() * 50) + 30;
+      tds += `<td><div class="skeleton-box" style="width: ${randWidth}%;"></div></td>`;
+    }
+    skelHtml += `<tr>${tds}</tr>`;
+  }
+  tbody.innerHTML = skelHtml;
+}
+
+async function loadTablePage(tableName, pageNum) {
+  const tbody = document.getElementById(`tbody-${tableName}`);
+  if (!tbody) return;
+
+  const colCount = tableName === 'produits' ? 4 : 6;
+  renderSkeletonRows(tbody, colCount);
+
+  await new Promise(r => setTimeout(r, 400));
+
+  const { rows, count, error } = await fetchTableData(tableName, pageNum, PAGE_SIZE);
 
   if (error) {
-    const tbody = document.getElementById(`tbody-${tableName}`);
-    if (tbody) tbody.innerHTML = `<tr class="empty-row"><td colspan="${colCount}">${error.message}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="${colCount}">${error.message}</td></tr>`;
     return;
   }
 
-  renderFn(rows);
+  if (tableName === 'produits') renderProduitsTable(rows);
+  if (tableName === 'orders') renderOrdersTable(rows);
+
+  renderPagination(tableName, count, pageNum);
+}
+
+function renderPagination(tableName, totalCount, currentPageNum) {
+  const container = document.getElementById(`pagination-${tableName}`);
+  if (!container) return;
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  let html = '';
+
+  html += `<button class="page-btn" ${currentPageNum === 1 ? 'disabled' : ''} onclick="loadTablePage('${tableName}', ${currentPageNum - 1})">&laquo; Prev</button>`;
+
+  let start = Math.max(1, currentPageNum - 2);
+  let end = Math.min(totalPages, currentPageNum + 2);
+
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i === currentPageNum ? 'active' : ''}" onclick="loadTablePage('${tableName}', ${i})">${i}</button>`;
+  }
+
+  html += `<button class="page-btn" ${currentPageNum === totalPages || totalPages === 0 ? 'disabled' : ''} onclick="loadTablePage('${tableName}', ${currentPageNum + 1})">Next &raquo;</button>`;
+  
+  container.innerHTML = html;
 }
 
 function renderProduitsTable(rows) {
   const tbody = document.getElementById('tbody-produits');
   if (!tbody) return;
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">No data available.</td></tr>`;
+    return;
+  }
   tbody.innerHTML = rows.map(p => `
     <tr>
       <td class="td-num">${p.id}</td>
       <td>${p.name}</td>
       <td><span class="td-tag">${p.categorie}</span></td>
-      <td class="td-num">${Number(p.price).toLocaleString()}</td>
+      <td class="td-num">${Number(p.price).toLocaleString()} $</td>
     </tr>
   `).join('');
 }
@@ -1194,75 +1211,161 @@ function renderProduitsTable(rows) {
 function renderOrdersTable(rows) {
   const tbody = document.getElementById('tbody-orders');
   if (!tbody) return;
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No data available.</td></tr>`;
+    return;
+  }
   tbody.innerHTML = rows.map(o => `
     <tr>
       <td class="td-num">${o.id}</td>
       <td class="td-num">${o.buyer_name}</td>
       <td class="td-num">${o.product_name}</td>
       <td class="td-num">${Number(o.quantity).toLocaleString()}</td>
-      <td><span class="td-tag">${o.purchase_date}</span></td>
-      <td>${o.purchase_price}</td>
+      <td><span class="td-tag">${o.purchase_date ? o.purchase_date.replace('T', ' ').split('.')[0] : 'NULL'}</span></td>
+      <td class="td-num">${Number(o.purchase_price).toLocaleString()} $</td>
     </tr>
   `).join('');
 }
 
 /* ═══════════════════════════════════════════════════════
-   QUERY EXECUTION HANDLER
+   QUERY EXECUTION & RESULT PAGINATION HANDLER
 ═══════════════════════════════════════════════════════ */
-async function handleRun(queryId, sql) {
-  const btn      = document.getElementById(`runBtn-${queryId}`);
-  const resultEl = document.getElementById(`result-${queryId}`);
+let currentQueryData = [];
+let currentQueryPage = 1;
+const QUERY_PAGE_SIZE = 10;
 
-  if (!btn || !resultEl) return;
+async function handleRun() {
+  const btn      = document.getElementById(`runBtn-${currentView}`);
+  const resultEl = document.getElementById('result-box-container');
 
-  // Loading state
+  if (!btn || !resultEl || !monacoEditorInstance) return;
+  
+  const sql = monacoEditorInstance.getValue().trim();
+  if(!sql) return;
+
   btn.classList.add('loading');
   btn.innerHTML = `<span class="spinner"></span> Running…`;
   resultEl.className = 'result-box';
-  resultEl.innerHTML = `<div class="result-label">▸ Executing</div><span style="color:#4B5563">Sending query to Supabase…</span>`;
+  resultEl.innerHTML = `<div class="result-label">▸ Executing</div><span style="color:#4B5563">Sending query via REST API…</span>`;
 
   const { data, error } = await runSupabaseQuery(sql);
 
-  // Restore button
   btn.classList.remove('loading');
-  btn.innerHTML = `<svg viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z"/></svg> RUN`;
+  btn.innerHTML = `<svg viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z"/></svg> RUN QUERY`;
 
   if (error) {
     resultEl.className = 'result-box has-error';
     resultEl.innerHTML = `
       <div class="result-label">▸ Error</div>
-      <span>${error.message || 'Unknown error'}</span>
+      <span>${error.message || 'Error compiling query syntax. Check your SQL.'}</span>
     `;
     return;
   }
 
-  renderQueryResult(resultEl, data);
+  currentQueryData = Array.isArray(data) ? data : (data ? [data] : []);
+  currentQueryPage = 1;
+  renderPaginatedResult();
 }
 
-function renderQueryResult(container, data) {
-  if (!data || (Array.isArray(data) && data.length === 0)) {
+function renderPaginatedResult() {
+  const container = document.getElementById('result-box-container');
+  if (!container) return;
+
+  if (!currentQueryData || currentQueryData.length === 0) {
     container.className = 'result-box has-result';
     container.innerHTML = `<div class="result-label">▸ Result</div><span style="color:#6B7280">Query returned 0 rows.</span>`;
     return;
   }
 
-  const rows = Array.isArray(data) ? data : [data];
-  const cols = Object.keys(rows[0]);
+  const totalRows = currentQueryData.length;
+  const totalPages = Math.ceil(totalRows / QUERY_PAGE_SIZE);
+  const startIdx = (currentQueryPage - 1) * QUERY_PAGE_SIZE;
+  const slice = currentQueryData.slice(startIdx, startIdx + QUERY_PAGE_SIZE);
+  const cols = Object.keys(currentQueryData[0]);
+
+  // SURPRISE 2: CSV Export Button
+  let html = `<div class="result-label" style="display:flex; justify-content:space-between; align-items:center;">
+    <span>▸ Result — ${totalRows} row${totalRows !== 1 ? 's' : ''} returned</span>
+    <button onclick="exportToCSV()" style="background:#2563EB; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:10px; cursor:pointer; font-family:'Fira Code', monospace; transition:background 0.2s;" onmouseover="this.style.background='#1D4ED8'" onmouseout="this.style.background='#2563EB'">Download CSV ↓</button>
+  </div>`;
+  
+  html += `<table class="result-table"><thead><tr>`;
+  
+  for (const c of cols) {
+    html += `<th>${c}</th>`;
+  }
+  
+  html += `</tr></thead><tbody>`;
+
+  for (const row of slice) {
+    html += `<tr>`;
+    for (const c of cols) {
+      const val = row[c];
+      if (val === null || val === undefined) {
+        html += `<td><span style="color:#4B5563; font-style:italic">NULL</span></td>`;
+      } else if (typeof val === 'number') {
+        const isPriceOrSalary = c.toLowerCase().includes('price') || c.toLowerCase().includes('salary') || c.toLowerCase().includes('revenue') || c.toLowerCase().includes('total');
+        const suffix = isPriceOrSalary ? ' $' : '';
+        html += `<td><span style="color:var(--syn-number)">${val.toLocaleString()}${suffix}</span></td>`;
+      } else {
+        let displayVal = val;
+        // Format ISO dates nicely
+        if (typeof val === 'string' && val.includes('T') && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
+          displayVal = val.replace('T', ' ').split('.')[0];
+        }
+        const safeVal = String(displayVal).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        html += `<td>${safeVal}</td>`;
+      }
+    }
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table>`;
+  
+  if (totalPages > 1) {
+    html += `<div class="result-pagination">`;
+    html += `<button class="result-page-btn" ${currentQueryPage === 1 ? 'disabled' : ''} onclick="changeResultPage(${currentQueryPage - 1})">&laquo; Prev</button>`;
+    
+    let start = Math.max(1, currentQueryPage - 2);
+    let end = Math.min(totalPages, currentQueryPage + 2);
+
+    for (let i = start; i <= end; i++) {
+      html += `<button class="result-page-btn ${i === currentQueryPage ? 'active' : ''}" onclick="changeResultPage(${i})">${i}</button>`;
+    }
+
+    html += `<button class="result-page-btn" ${currentQueryPage === totalPages ? 'disabled' : ''} onclick="changeResultPage(${currentQueryPage + 1})">Next &raquo;</button>`;
+    html += `</div>`;
+  }
 
   container.className = 'result-box has-result';
-  container.innerHTML = `
-    <div class="result-label">▸ Result — ${rows.length} row${rows.length !== 1 ? 's' : ''}</div>
-    <table class="result-table">
-      <thead>
-        <tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>
-      </thead>
-      <tbody>
-        ${rows.map(row => `
-          <tr>${cols.map(c => `<td>${row[c] ?? 'NULL'}</td>`).join('')}</tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
+  container.innerHTML = html;
+}
+
+function changeResultPage(page) {
+  currentQueryPage = page;
+  renderPaginatedResult();
+}
+
+function exportToCSV() {
+  if (!currentQueryData || currentQueryData.length === 0) return;
+  const keys = Object.keys(currentQueryData[0]);
+  
+  const csv = [
+    keys.join(','),
+    ...currentQueryData.map(row => keys.map(k => {
+      let val = row[k] === null ? '' : String(row[k]);
+      return `"${val.replace(/"/g, '""')}"`;
+    }).join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `sql_window_result_${new Date().getTime()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1278,7 +1381,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 /* ═══════════════════════════════════════════════════════
    BOOT — render landing page
 ═══════════════════════════════════════════════════════ */
-document.getElementById('mainContent').innerHTML = VIEWS.landing();
+document.getElementById('mainContent').innerHTML = RENDERERS.landing();
 </script>
 </body>
 </html>
