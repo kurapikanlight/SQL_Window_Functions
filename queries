@@ -1,0 +1,154 @@
+-- 1. OVER() — the absolute basics (no PARTITION, no ORDER)
+-- Total revenue per order line, plus the GRAND TOTAL repeated on every row
+SELECT
+    buyer_name,
+    product_name,
+    purchase_price * quantity AS line_total,
+    SUM(purchase_price * quantity) OVER () AS total_all_orders
+FROM orders
+
+
+--2. OVER (PARTITION BY ...) — split the window into groups
+-- Total spent BY EACH BUYER, shown next to every one of their orders
+SELECT
+    buyer_name,
+    product_name,
+    purchase_price * quantity AS line_total,
+    SUM(purchase_price * quantity) OVER (PARTITION BY buyer_name) AS total_per_buyer
+FROM orders
+-- vs 
+SELECT
+    buyer_name,
+    product_name,
+    SUM(purchase_price * quantity) OVER ()                    AS global_total,
+    SUM(purchase_price * quantity) OVER (PARTITION BY buyer_name) AS buyer_total
+FROM orders
+ORDER BY buyer_name
+
+--3. ORDER BY inside OVER() — running totals
+-- Running total of how much Alice has spent, order by order, over time
+SELECT
+    buyer_name,
+    purchase_date,
+    product_name,
+    purchase_price * quantity AS line_total,
+    SUM(purchase_price * quantity) OVER (
+        PARTITION BY buyer_name
+        ORDER BY purchase_date
+    ) AS running_total
+FROM orders
+ORDER BY buyer_name, purchase_date
+--Teaching point: Adding ORDER BY inside OVER() changes the window from "all rows in the partition" to "rows up to and including this one" — a running/cumulative calculation.
+
+--4. ROW_NUMBER() — unique sequential numbering
+-- Number each buyer's orders in chronological order: 1st order, 2nd order...
+SELECT
+    buyer_name,
+    purchase_date,
+    product_name,
+    ROW_NUMBER() OVER (
+        PARTITION BY buyer_name
+        ORDER BY purchase_date
+    ) AS order_sequence
+FROM orders
+ORDER BY buyer_name, order_sequence
+
+SELECT * FROM (
+    SELECT
+        buyer_name,
+        product_name,
+        purchase_date,
+        ROW_NUMBER() OVER (PARTITION BY buyer_name ORDER BY purchase_date) AS rn
+    FROM orders
+) t
+WHERE rn = 1
+
+--5. RANK() vs DENSE_RANK() — handling ties
+-- Rank products by price within each category, cheapest = 1
+SELECT
+    categorie,
+    name,
+    price,
+    DENSE_RANK() OVER (PARTITION BY categorie ORDER BY price) AS rang_dense_rank
+FROM produits
+ORDER BY categorie, price
+-- 
+SELECT
+    categorie,
+    name,
+    price,
+    RANK()       OVER (PARTITION BY categorie ORDER BY price) AS rang_rank
+FROM produits
+ORDER BY rang_rank
+
+-- Force a clear tie example: rank ALL products by price, ignoring category
+SELECT
+    name,
+    categorie,
+    price,
+    RANK()       OVER (ORDER BY price) AS rang_rank,
+    DENSE_RANK() OVER (ORDER BY price) AS rang_dense_rank,
+    ROW_NUMBER() OVER (ORDER BY price) AS rang_row_number
+FROM produits
+ORDER BY price
+--6. LAG() and LEAD() — look at previous/next row
+-- For each buyer, compare each order's price to their PREVIOUS order
+SELECT
+    buyer_name,
+    purchase_date,
+    product_name,
+    purchase_price,
+    LAG(purchase_price) OVER (
+        PARTITION BY buyer_name
+        ORDER BY purchase_date
+    ) AS previous_order_price,
+    LEAD(purchase_price) OVER (
+        PARTITION BY buyer_name
+        ORDER BY purchase_date
+    ) AS next_order_price
+FROM orders
+ORDER BY buyer_name, purchase_date
+
+SELECT
+    buyer_name,
+    purchase_date,
+    product_name,
+    purchase_price,
+    purchase_price - LAG(purchase_price) OVER (
+        PARTITION BY buyer_name ORDER BY purchase_date
+    ) AS price_difference_vs_previous
+FROM orders
+ORDER BY buyer_name, purchase_date
+
+--7. AVG() OVER() — comparing a row to the average
+-- WITH ORDER BY in OVER(): window = only rows UP TO this one, total grows row by row
+SELECT
+    buyer_name,
+    purchase_date,
+    product_name,
+    purchase_price * quantity AS line_total,
+    SUM(purchase_price * quantity) OVER (
+        PARTITION BY buyer_name
+        ORDER BY purchase_date
+    ) AS running_total
+FROM orders
+ORDER BY buyer_name, purchase_date
+-- Compare each product's price to the AVERAGE price in its category
+SELECT
+    categorie,
+    name,
+    price,
+    AVG(price) OVER (PARTITION BY categorie) AS avg_price_category,
+    price - AVG(price) OVER (PARTITION BY categorie) AS diff_from_avg
+FROM produits
+ORDER BY categorie, price
+--vs 
+SELECT * FROM (
+    SELECT
+        categorie,
+        name,
+        price,
+        AVG(price) OVER (PARTITION BY categorie) AS avg_price_category
+    FROM produits
+) t
+WHERE price > avg_price_category;
